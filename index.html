@@ -739,7 +739,7 @@ document.getElementById('xyPadReset').addEventListener('click', () => {
   document.getElementById('xyPadNuke').classList.remove('active');
   setMasterVol(masterVol);
 });
-const trackInstruments = ['shak','sleg','sparkle','sbass3','congHi','congLo'];
+const trackInstruments = ['shak','ngate','sparkle','sbass3','congHi','congLo'];
 const grid        = Array.from({length: NUM_TRACKS}, () => new Array(NUM_STEPS).fill(0));
 const trackOffset = new Array(NUM_TRACKS).fill(0);
 const trackMuted  = new Array(NUM_TRACKS).fill(false);
@@ -1192,16 +1192,17 @@ function triggerNoiseGate(tr, isAccent, time) {
   const sweepStart = isAccent ? 3000 : 1200;
   const sweepEnd   = isAccent ? 200  : 400;
   const dur = stepDuration() * 0.85;
-  // Sweep filter freq down (noise sweeps in with low-end opening)
+  // Sweep filter freq down
   filt.frequency.cancelScheduledValues(time);
   filt.frequency.setValueAtTime(sweepStart, time);
   filt.frequency.exponentialRampToValueAtTime(sweepEnd, time + dur * 0.6);
-  // Gate envelope: snap open, slow close
+  // Gate: silence → open → fade back to silence
   gate.gain.cancelScheduledValues(time);
   gate.gain.setValueAtTime(0, time);
   gate.gain.linearRampToValueAtTime(vel, time + 0.004);
   gate.gain.setValueAtTime(vel * 0.7, time + dur * 0.3);
-  gate.gain.exponentialRampToValueAtTime(0.001, time + dur);
+  gate.gain.exponentialRampToValueAtTime(0.0001, time + dur);
+  gate.gain.setValueAtTime(0, time + dur + 0.005); // hard silence
 }
 
 function playRhodes(freq, durSec, isAccent, time, tr) {
@@ -2063,7 +2064,7 @@ function fullClear() {
     try { _noiseGateNodes[tr].src.stop(); } catch(e) {}
     delete _noiseGateNodes[+tr];
   });
-  const defaultInstruments = ['shak','sleg','sparkle','sbass3','congHi','congLo'];
+  const defaultInstruments = ['shak','ngate','sparkle','sbass3','congHi','congLo'];
   for (let tr = 0; tr < NUM_TRACKS; tr++) {
     grid[tr].fill(0); trackOffset[tr] = 0; trackPatternState[tr] = 0;
     trackMuted[tr] = false; trackSweep[tr] = false; trackChop[tr] = false;
