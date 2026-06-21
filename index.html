@@ -2332,6 +2332,11 @@ function randAll(mode) {
     const sb = document.getElementById(`swpbtn-${tr}`);
     if (sb) { const tonal = TONAL_KEYS.has(k); sb.textContent = tonal ? 'E' : 'S'; }
     randomizeTrack(tr);
+    // Set volume to halfway
+    trackVolume[tr] = 0.5;
+    if (trackGainNodes[tr] && ctx) trackGainNodes[tr].gain.setTargetAtTime(0.5, ctx.currentTime, 0.01);
+    const vb = document.getElementById(`vbar-${tr}`);
+    if (vb) { const f = vb.querySelector('.track-vol-fill'); if (f) f.style.width = '50%'; }
   }
   markModified();
 }
