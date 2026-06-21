@@ -26,7 +26,7 @@ body::before {
   content: '';
   position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background: url('boombox.jpg') no-repeat right bottom / contain;
-  opacity: 0.08;
+  opacity: 0.16;
 }
 body > * { position: relative; z-index: 1; }
 header {
@@ -310,15 +310,15 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
   display: flex; align-items: center; justify-content: center;
-  font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 0.85rem;
+  font-family: 'DM Sans', sans-serif; font-weight: 700;
   background: transparent; transition: color 0.05s, opacity 0.05s;
   pointer-events: none;
 }
-.step-cell.soft::after { content: '×'; color: var(--text); opacity: 0.75; }
-.step-cell.on::after   { content: '×'; color: var(--text); opacity: 1; }
+.step-cell.soft::after { content: '×'; color: var(--text); opacity: 0.75; font-size: 1.4rem; }
+.step-cell.on::after   { content: '×'; color: var(--text); opacity: 1;    font-size: 1.9rem; }
 .step-cell.playing { background: rgba(192,57,43,0.07); }
-.step-cell.on.playing::after   { content: '×'; color: var(--playhead); opacity: 1; }
-.step-cell.soft.playing::after { content: '×'; color: var(--playhead); opacity: 0.75; }
+.step-cell.on.playing::after   { content: '×'; color: var(--playhead); opacity: 1; font-size: 1.9rem; }
+.step-cell.soft.playing::after { content: '×'; color: var(--playhead); opacity: 0.75; font-size: 1.4rem; }
 
 /* ── Track lane label — now inside ctrl row, removed ── */
 
@@ -366,7 +366,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 <body>
 
 <button id="loadingOverlay" onclick="document.getElementById('loadingMsg').textContent='TAPPED - LOADING...'; initAudio()">
-  <h2>PERC-O-SET</h2>
+  <h2>BOOMBOT</h2>
   <p id="loadingMsg">Tap to load</p>
 </button>
 
@@ -411,7 +411,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 </div>
 
 <header>
-  <h1>PERC-O-SET</h1>
+  <h1>BOOMBOT</h1>
 </header>
 
 <div class="transport">
@@ -1197,7 +1197,7 @@ const _rhodesGlide = {};
 function playRhodes(freq, durSec, isAccent, time, tr) {
   if (!ctx || !freq) return;
   const dest = getSynthConnectNode(tr);
-  const vel = isAccent ? 0.42 : 0.28;
+  const vel = isAccent ? 0.236 : 0.157;
   _rhodesGlide[tr] = freq;
 
   // Additive: fundamental + 2nd + 3rd harmonic, sine waves, decreasing amplitude
@@ -1951,7 +1951,7 @@ async function saveLoop() {
     }
 
     // Share or download
-    const shareData = { files, title: 'PERC-O-SET loops' };
+    const shareData = { files, title: 'BOOMBOT loops' };
     if (navigator.share) {
       try {
         await navigator.share(shareData);
@@ -2022,7 +2022,7 @@ function audioBufferToWav(buffer, tempoHint) {
 
   // bext chunk (602 bytes content)
   wStr('bext'); wU32(bextContent);
-  wStr('PERC-O-SET', 256);  // Description (256)
+  wStr('BOOMBOT', 256);  // Description (256)
   wZero(32);                 // Originator (32)
   wZero(32);                 // OriginatorReference (32)
   wZero(10);                 // OriginationDate (10)
