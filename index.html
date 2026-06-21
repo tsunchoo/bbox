@@ -334,10 +334,10 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
     <div id="xyPadArea">
       <div id="xyIntensity"></div>
       <div id="xyDot"></div>
-      <span class="xy-axis-label xy-x">CRUNCH →</span>
-      <span class="xy-axis-label xy-y">ENV ↑</span>
+      <span class="xy-axis-label xy-x">CHOKE →</span>
+      <span class="xy-axis-label xy-y">SLAP ↑</span>
     </div>
-    <div id="xyLabel">CRUNCH 0%  ENV 0%</div>
+    <div id="xyLabel">CHOKE 0%  SLAP 0%</div>
   </div>
 </div>
 
@@ -461,42 +461,27 @@ async function loadSamples() {
 }
 
 // ── FX: XY pad per track ─────────────────────────────────────────────────────
-// trackFx[tr] = { x: 0-1 crunch, y: 0-1 envelope } or null (dry)
+
 // x=0 clean, x=1 maximum waveshaper drive
 // y=0 full attack/full tail, y=1 blunted attack + hard gate
 const FX_LABELS = ['DRY'];
 const trackFxNodes = [];
 
-function makeDistCurve(drive) {
-  const n = 512, c = new Float32Array(n), k = drive * 400;
-  for (let i = 0; i < n; i++) {
-    const x = (i * 2) / n - 1;
-    c[i] = k > 0 ? ((Math.PI + k) * x) / (Math.PI + k * Math.abs(x)) : x;
-  }
-  return c;
-}
-
 function buildFxChain(trackGain) {
   const dryGain = ctx.createGain(); dryGain.gain.value = 1; dryGain.connect(trackGain);
   const fxSend  = ctx.createGain(); fxSend.gain.value = 0;
-  const preGain = ctx.createGain(); preGain.gain.value = 0.25; // lower pre-gain to control added energy
-  const ws = ctx.createWaveShaper(); ws.oversample = '2x'; // 2x saves CPU and limits harmonic explosion
-  ws.curve = makeDistCurve(0);
-  const postGain = ctx.createGain(); postGain.gain.value = 0.4; // compensate down so FX ≈ dry level
-  const lim = ctx.createDynamicsCompressor();
-  lim.threshold.value = -6; lim.knee.value = 3; lim.ratio.value = 20;
-  lim.attack.value = 0.0005; lim.release.value = 0.08;
-  fxSend.connect(preGain); preGain.connect(ws); ws.connect(postGain); postGain.connect(lim); lim.connect(trackGain);
-  return { dryGain, fxSend, ws, preGain, postGain };
+  // Gate: controlled by x value at note-time via per-note envGain scheduling
+  // Chain: fxSend → gateGain → trackGain
+  const gateGain = ctx.createGain(); gateGain.gain.value = 1;
+  fxSend.connect(gateGain); gateGain.connect(trackGain);
+  return { dryGain, fxSend, gateGain };
 }
 function setFxActive(tr, fxVal) {
   if (!trackFxNodes[tr]) return;
   const on = fxVal && (fxVal.x > 0 || fxVal.y > 0);
-  const { dryGain, fxSend, ws } = trackFxNodes[tr];
+  const { dryGain, fxSend } = trackFxNodes[tr];
   dryGain.gain.setTargetAtTime(on ? 0 : 1, ctx.currentTime, 0.01);
   fxSend.gain.setTargetAtTime(on ? 1 : 0, ctx.currentTime, 0.01);
-  if (on) ws.curve = makeDistCurve(fxVal.x);
-  // Halve track volume when FX is on
   if (trackGainNodes[tr]) {
     const fxComp = on ? trackVolume[tr] * 0.5 : trackVolume[tr];
     trackGainNodes[tr].gain.setTargetAtTime(fxComp, ctx.currentTime, 0.01);
@@ -550,6 +535,16 @@ function playBuffer(key, isAccent, time, tr) {
   const on = fxVal && (fxVal.x > 0 || fxVal.y > 0);
   if (tr !== undefined && trackFxNodes[tr] && on) {
     src.connect(instrumentGain); instrumentGain.connect(trackFxNodes[tr].fxSend);
+    // X axis: choke gate — X=0 full duration, X=1 = 10ms
+    const gateG = trackFxNodes[tr].gateGain;
+    if (gateG && fxVal.x > 0) {
+      const gateLen = Math.max(0.01, buf.duration * (1 - fxVal.x) + 0.01 * fxVal.x);
+      gateG.gain.cancelScheduledValues(time);
+      gateG.gain.setValueAtTime(1, time);
+      gateG.gain.setValueAtTime(1, time + gateLen);
+      gateG.gain.linearRampToValueAtTime(0, time + gateLen + 0.005);
+      gateG.gain.setValueAtTime(1, time + gateLen + 0.1);
+    }
   } else if (tr !== undefined && trackFxNodes[tr]) {
     src.connect(instrumentGain); instrumentGain.connect(trackFxNodes[tr].dryGain);
   } else {
@@ -596,7 +591,7 @@ function renderXYDot(x, y) {
   intensity.style.width  = (x * 100) + '%';
   intensity.style.height = (y * 100) + '%';
   document.getElementById('xyLabel').textContent =
-    `CRUNCH ${Math.round(x*100)}%  ENV ${Math.round(y*100)}%`;
+    `CHOKE ${Math.round(x*100)}%  SLAP ${Math.round(y*100)}%`;
 }
 function xyFromEvent(e, pad) {
   const r = pad.getBoundingClientRect();
@@ -708,6 +703,11 @@ function scheduler() {
             dg.gain.linearRampToValueAtTime(0.63, t + 0.008); // -4dB
             dg.gain.setValueAtTime(0.63, t + duckDur * 0.5);
             dg.gain.linearRampToValueAtTime(1, t + duckDur);
+          }
+          const sfxOn = !!(trackFx[tr] && (trackFx[tr].x > 0 || trackFx[tr].y > 0));
+          // X axis: choke — cap note duration down to 10ms at extreme
+          if (sfxOn && trackFx[tr].x > 0) {
+            dur = Math.max(0.01, dur * (1 - trackFx[tr].x) + 0.01 * trackFx[tr].x);
           }
           if (key === 'sbass')   playSynthBass(freq, dur, val === 2, t, tr);
           if (key === 'sbass2')  playPluckBass(freq, dur, val === 2, t, tr);
@@ -1072,48 +1072,54 @@ const _rhodesGlide = {};
 function playRhodes(freq, durSec, isAccent, time, tr) {
   if (!ctx || !freq) return;
   const dest = getSynthConnectNode(tr);
-  const vel = isAccent ? 0.55 : 0.38;
-  const prevFreq = _rhodesGlide[tr] || freq;
+  const vel = isAccent ? 0.42 : 0.28;
   _rhodesGlide[tr] = freq;
-  const glide = Math.min(0.04, durSec * 0.1);
 
-  // FM: modulator at ~3.49x carrier (classic Rhodes ratio)
-  const modFreq = freq * 3.49;
-  const carrier = ctx.createOscillator(); carrier.type = 'sine';
-  const modulator = ctx.createOscillator(); modulator.type = 'sine';
-  const modGain = ctx.createGain();
-  const ampEnv = ctx.createGain();
+  // Additive: fundamental + 2nd + 3rd harmonic, sine waves, decreasing amplitude
+  // Characteristic Rhodes: warm fundamental with soft upper partials that decay faster
+  const partials = [
+    { ratio: 1,    amp: 1.0,  decayMul: 1.0  },
+    { ratio: 2,    amp: 0.28, decayMul: 0.55 },
+    { ratio: 3,    amp: 0.10, decayMul: 0.35 },
+    { ratio: 4,    amp: 0.04, decayMul: 0.22 },
+  ];
 
-  // Carrier glide
-  carrier.frequency.setValueAtTime(Math.max(prevFreq, 1), time);
-  carrier.frequency.exponentialRampToValueAtTime(Math.max(freq, 1), time + glide);
-  modulator.frequency.setValueAtTime(Math.max(prevFreq * 3.49, 1), time);
-  modulator.frequency.exponentialRampToValueAtTime(Math.max(modFreq, 1), time + glide);
+  // Natural decay length — Rhodes sustains but fades
+  const decayLen = Math.min(durSec + 0.8, 3.5);
 
-  // Modulation index decays quickly — gives the tine bell click then warm tone
-  modGain.gain.setValueAtTime(freq * 1.8, time);
-  modGain.gain.exponentialRampToValueAtTime(freq * 0.4, time + 0.15);
-  modGain.gain.exponentialRampToValueAtTime(freq * 0.08, time + durSec * 0.7);
+  partials.forEach(({ ratio, amp, decayMul }) => {
+    const osc = ctx.createOscillator(); osc.type = 'sine';
+    osc.frequency.value = freq * ratio;
+    const env = ctx.createGain();
+    const partialVel = vel * amp;
+    env.gain.setValueAtTime(0, time);
+    env.gain.linearRampToValueAtTime(partialVel, time + 0.004);
+    env.gain.exponentialRampToValueAtTime(partialVel * 0.6, time + 0.04);
+    env.gain.exponentialRampToValueAtTime(0.001, time + decayLen * decayMul);
+    osc.connect(env); env.connect(dest);
+    osc.start(time); osc.stop(time + decayLen * decayMul + 0.05);
+  });
 
-  // Amp envelope: sharp attack, medium sustain, natural decay
-  ampEnv.gain.setValueAtTime(0, time);
-  ampEnv.gain.linearRampToValueAtTime(vel, time + 0.003);
-  ampEnv.gain.exponentialRampToValueAtTime(vel * 0.5, time + 0.12);
-  ampEnv.gain.exponentialRampToValueAtTime(vel * 0.2, time + Math.min(durSec * 0.8, 1.2));
-  ampEnv.gain.exponentialRampToValueAtTime(0.001, time + Math.min(durSec + 0.4, 2.0));
+  // Soft attack noise burst — the felt hammer on the tine
+  const noiseLen = 0.012;
+  const noiseBuf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * noiseLen), ctx.sampleRate);
+  const nd = noiseBuf.getChannelData(0);
+  for (let i = 0; i < nd.length; i++) nd[i] = (Math.random() * 2 - 1);
+  const noise = ctx.createBufferSource(); noise.buffer = noiseBuf;
+  const noiseFilt = ctx.createBiquadFilter(); noiseFilt.type = 'bandpass'; noiseFilt.frequency.value = freq * 3; noiseFilt.Q.value = 2;
+  const noiseEnv = ctx.createGain();
+  noiseEnv.gain.setValueAtTime(vel * 0.08, time);
+  noiseEnv.gain.exponentialRampToValueAtTime(0.001, time + noiseLen);
+  noise.connect(noiseFilt); noiseFilt.connect(noiseEnv); noiseEnv.connect(dest);
+  noise.start(time);
 
-  // Subtle tremolo LFO (classic Rhodes character)
-  const lfo = ctx.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 5.2;
-  const lfoGain = ctx.createGain(); lfoGain.gain.value = vel * 0.06;
-  lfo.connect(lfoGain); lfoGain.connect(ampEnv.gain);
-
-  modulator.connect(modGain); modGain.connect(carrier.frequency);
-  carrier.connect(ampEnv); ampEnv.connect(dest);
-
-  const stopT = time + Math.min(durSec + 0.5, 2.2);
-  carrier.start(time); carrier.stop(stopT);
-  modulator.start(time); modulator.stop(stopT);
-  lfo.start(time); lfo.stop(stopT);
+  // Subtle tremolo
+  const lfo = ctx.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 5.0;
+  const lfoG = ctx.createGain(); lfoG.gain.value = vel * 0.04;
+  // Connect LFO to destination gain — approximate tremolo
+  const tremoloEnv = ctx.createGain(); tremoloEnv.gain.value = 1;
+  lfo.connect(lfoG); lfoG.connect(tremoloEnv.gain);
+  lfo.start(time); lfo.stop(time + decayLen + 0.1);
 }
 // ── Pluck Bass: resonant attack, fast decay ──
 function playPluckBass(freq, durSec, isAccent, time, tr) {
