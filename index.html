@@ -424,6 +424,24 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
   </div>
 </div>
 
+<div id="randOverlay">
+  <div id="randOverlayInner">
+    <div class="rand-overlay-title">RANDOMIZE</div>
+    <button class="rand-overlay-btn" id="randPercBtn">PERC</button>
+    <button class="rand-overlay-btn" id="randTonalBtn">TONAL</button>
+  </div>
+</div>
+
+<div id="bpmOverlay">
+  <div id="bpmOverlayInner">
+    <div class="bpm-slider-wrap">
+      <input type="range" id="bpmSlider" min="40" max="200" value="110"
+        oninput="bpm=+this.value; document.getElementById('bpmVal').textContent=this.value; document.getElementById('bpmOverlayVal').textContent=this.value+' BPM'">
+    </div>
+    <div id="bpmOverlayVal">110 BPM</div>
+  </div>
+</div>
+
 <!-- Vol overlay -->
 <div id="volOverlay">
   <div class="vol-overlay-inner">
@@ -446,24 +464,6 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
   <button class="btn" id="bpmBtn" onclick="toggleBpmOverlay()" style="margin-left:auto;min-width:56px;"><span id="bpmVal">110</span></button>
 </div>
 <span style="display:none" id="bpmValHidden">110</span>
-
-<div id="randOverlay">
-  <div id="randOverlayInner">
-    <div class="rand-overlay-title">RANDOMIZE</div>
-    <button class="rand-overlay-btn" id="randPercBtn">PERC</button>
-    <button class="rand-overlay-btn" id="randTonalBtn">TONAL</button>
-  </div>
-</div>
-
-<div id="bpmOverlay">
-  <div id="bpmOverlayInner">
-    <div class="bpm-slider-wrap">
-      <input type="range" id="bpmSlider" min="40" max="200" value="110"
-        oninput="bpm=+this.value; document.getElementById('bpmVal').textContent=this.value; document.getElementById('bpmOverlayVal').textContent=this.value+' BPM'">
-    </div>
-    <div id="bpmOverlayVal">110 BPM</div>
-  </div>
-</div>
 
 <!-- Sequencer grid -->
 <div class="seq-wrap" id="seqWrap"></div>
