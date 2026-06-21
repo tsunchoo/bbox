@@ -14,14 +14,13 @@
   --vol-fill: #7ecf3a;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html { height: 100%; }
-body { overflow: hidden; height: 100%; }
+html, body { overflow: hidden; height: 100%; }
 button, .step-cell, .track-header-btn, .vol-mute-col, .fx-btn { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 body {
   background: var(--bg); color: var(--text);
   font-family: 'DM Sans', sans-serif;
   min-height: 100vh; display: flex; flex-direction: column; align-items: center;
-  padding: 48px 4px 80px 4px; user-select: none; -webkit-user-select: none;
+  padding: 6px 4px 80px 4px; user-select: none; -webkit-user-select: none;
 }
 header {
   width: 100%; max-width: 960px; display: flex; align-items: center;
@@ -84,8 +83,8 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 }
 .track-ctrl-icon-btn.on { background: var(--playhead); color: #fff; border-color: var(--playhead); }
 .track-ctrl-icon-btn.sweep-on { background: #2255cc; border-color: #1a44aa; color: #fff; }
-.rand-btn:active, .rand-btn:hover { background: var(--text) !important; color: var(--bg) !important; }
-.rand-btn.pulsing { border-color: var(--text); color: #fff; animation: pulse 0.45s infinite alternate; }
+.rand-btn.pulsing { background: var(--playhead); border-color: var(--text); color: #fff; animation: pulse 0.45s infinite alternate; }
+.rand-btn:not(.pulsing):active { background: var(--text); color: var(--bg); }
 @keyframes pulse { from { background: var(--playhead); } to { background: #7a1000; } }
 .track-ctrl-icon-btn.playing { opacity: 0.45; }
 .shift-btn {
@@ -2576,7 +2575,6 @@ function wireRandomizeButton(btn, tr) {
 
   const startAutoShift = () => {
     autoShifting = true;
-    autoShiftStops[tr] = stopAutoShift;
     btn.classList.add('pulsing');
     const tbtn = document.getElementById(`tbtn-${tr}`);
     const barMs = stepDuration() * NUM_STEPS * 1000;
@@ -2593,6 +2591,7 @@ function wireRandomizeButton(btn, tr) {
       if (tbtn) tbtn.classList.toggle('shifting', pulseOn);
     }, quarterMs);
     if (tbtn) tbtn.classList.add('shifting');
+    autoShiftStops[tr] = stopAutoShift;
   };
 
   const stopAutoShift = () => {
