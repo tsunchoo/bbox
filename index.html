@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <title>PERCOSET</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
@@ -20,7 +20,7 @@ body {
   background: var(--bg); color: var(--text);
   font-family: 'DM Sans', sans-serif;
   min-height: 100vh; display: flex; flex-direction: column; align-items: center;
-  padding: 6px 4px 80px 4px; user-select: none; -webkit-user-select: none;
+  padding: max(env(safe-area-inset-top), 12px) 4px 80px 4px; user-select: none; -webkit-user-select: none;
 }
 header {
   width: 100%; max-width: 960px; display: flex; align-items: center;
