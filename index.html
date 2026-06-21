@@ -41,6 +41,7 @@ header .sub { font-size: 0.44rem; color: var(--dim); letter-spacing: 2px; text-t
   touch-action: manipulation;
 }
 .btn.active { background: var(--text); color: var(--bg); }
+.btn:hover, .btn:active { background: var(--text); color: var(--bg); }
 .bpm-wrap { display: flex; align-items: center; gap: 6px; flex: 1; }
 .bpm-val { font-size: 0.9rem; font-weight: 700; min-width: 32px; text-align: right; flex-shrink: 0; }
 input[type=range] { -webkit-appearance: none; flex: 1; height: 3px; background: var(--text); outline: none; }
@@ -1070,7 +1071,7 @@ function playWoodblock(isAccent, time, tr) {
   // Acoustic piano: additive harmonics + hammer noise + string resonance
   if (!ctx) return;
   const dest = getSynthConnectNode(tr);
-  const vel = isAccent ? 0.55 : 0.35;
+  const vel = isAccent ? 0.347 : 0.221;
   // Note: use middle register piano pitch (A4=440 for accent, D4=294 for soft)
   const freq = isAccent ? 440 : 294;
   const decayLen = isAccent ? 2.2 : 1.6;
@@ -1393,7 +1394,7 @@ function triggerNoiseGate(tr, isAccent, time) {
 function playRhodes(freq, durSec, isAccent, time, tr) {
   if (!ctx || !freq) return;
   const dest = getSynthConnectNode(tr);
-  const vel = isAccent ? 0.28 : 0.18;
+  const vel = isAccent ? 0.177 : 0.114;
   _rhodesGlide[tr] = freq;
 
   const partials = [
