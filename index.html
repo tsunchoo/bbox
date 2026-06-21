@@ -102,13 +102,31 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
   position: absolute; top: 0; left: 0; bottom: 0;
   background: var(--vol-fill); pointer-events: none; transition: width 0.05s;
 }
-.track-vol-bar.muted { background: #ccc; }
+.track-vol-bar.muted { background: #ccc; border-color: #aaa; }
 .track-vol-bar.muted .track-vol-fill { background: transparent; }
 .row-muted .track-ctrl-icon-btn,
 .row-muted .shift-btn {
   background: #ccc !important; border-color: #aaa !important; color: #888 !important;
   animation: none !important;
 }
+
+/* ── BPM overlay ── */
+#bpmOverlay {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.4);
+}
+#bpmOverlay.visible { display: flex; align-items: center; justify-content: center; }
+#bpmOverlayInner {
+  background: var(--bg); border: 3px solid var(--text); padding: 20px 24px;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  min-height: 260px;
+}
+#bpmSlider {
+  -webkit-appearance: slider-vertical; writing-mode: bt-lr;
+  height: 180px; width: 32px; cursor: ns-resize;
+}
+#bpmSlider::-webkit-slider-thumb { -webkit-appearance: none; width: 32px; height: 32px; background: var(--text); border-radius: 0; }
+#bpmOverlayVal { font-size: 1rem; font-weight: 700; letter-spacing: 1px; font-family: 'DM Sans', sans-serif; }
 
 /* ── XY FX Pad ── */
 #xyPad {
@@ -379,10 +397,14 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
   <button class="btn" id="playBtn" onclick="togglePlay()">PLAY</button>
   <button class="btn" id="beatBtn" onclick="toggleBeat()">BEAT</button>
   <button class="btn" id="clearBtn" onclick="fullClear()">CLEAR</button>
-  <div class="bpm-wrap">
-    <span class="bpm-val" id="bpmVal">110</span>
-    <input type="range" id="bpmSlider" min="80" max="160" value="110"
-      oninput="document.getElementById('bpmVal').textContent=this.value; bpm=+this.value">
+  <button class="btn" id="bpmBtn" onclick="toggleBpmOverlay()"><span id="bpmVal">110</span> BPM</button>
+</div>
+
+<div id="bpmOverlay">
+  <div id="bpmOverlayInner">
+    <input type="range" id="bpmSlider" min="40" max="200" value="110" orient="vertical"
+      oninput="bpm=+this.value; document.getElementById('bpmVal').textContent=this.value; document.getElementById('bpmOverlayVal').textContent=this.value+' BPM'">
+    <div id="bpmOverlayVal">110 BPM</div>
   </div>
 </div>
 
@@ -393,6 +415,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
   <button class="ghost-btn" onclick="randomize()">+</button>
   <span class="status" id="status"></span>
   <button class="ghost-btn" onclick="fullClear()">&#10005;</button>
+  <button class="ghost-btn" onclick="randAll()">RAND</button>
 </div>
 <div class="slot-bar" id="slotBar"></div>
 <div class="vol-section">
@@ -846,6 +869,21 @@ function updatePlayhead(step) {
     }
   }
 }
+
+function toggleBpmOverlay() {
+  const ov = document.getElementById('bpmOverlay');
+  const isVisible = ov.classList.toggle('visible');
+  if (isVisible) {
+    document.getElementById('bpmSlider').value = bpm;
+    document.getElementById('bpmOverlayVal').textContent = bpm + ' BPM';
+  }
+}
+document.addEventListener('click', e => {
+  const ov = document.getElementById('bpmOverlay');
+  if (ov && ov.classList.contains('visible') && !document.getElementById('bpmOverlayInner').contains(e.target) && e.target.id !== 'bpmBtn') {
+    ov.classList.remove('visible');
+  }
+});
 
 function togglePlay() {
   if (ctx) ctx.resume();
@@ -2100,6 +2138,26 @@ function cyclePattern(tr) {
   else trackPatternState[tr]=0;
   redrawTrackCells(tr); markModified();
 }
+function randAll() {
+  const keys = Object.keys(INSTRUMENTS);
+  for (let tr = 0; tr < NUM_TRACKS; tr++) {
+    // Pick random instrument
+    const k = keys[Math.floor(Math.random() * keys.length)];
+    // Update instrument (mirrors selectSound without closing picker)
+    if (trackInstruments[tr] === 'ngate' && k !== 'ngate' && _noiseGateNodes[tr]) {
+      try { _noiseGateNodes[tr].src.stop(); } catch(e) {} delete _noiseGateNodes[tr];
+    }
+    trackInstruments[tr] = k;
+    if (k === 'ngate' && ctx) initNoiseGate(tr);
+    const tb = document.getElementById(`tbtn-${tr}`); if (tb) tb.textContent = INSTRUMENTS[k]?.name || k;
+    const sb = document.getElementById(`swpbtn-${tr}`);
+    if (sb) { const tonal = TONAL_KEYS.has(k); sb.textContent = tonal ? 'E' : 'S'; }
+    // Randomize pattern
+    randomizeTrack(tr);
+  }
+  markModified();
+}
+
 function randomize() { for (let tr=0; tr<NUM_TRACKS; tr++) cyclePattern(tr); }
 
 const NUM_SLOTS = 6, slots = new Array(NUM_SLOTS).fill(null);
