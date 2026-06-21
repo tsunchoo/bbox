@@ -14,13 +14,17 @@
   --vol-fill: #7ecf3a;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { overflow: hidden; height: 100%; }
+html { height: 100%; }
+body { overflow: hidden; height: 100%; }
 button, .step-cell, .track-header-btn, .vol-mute-col, .fx-btn { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 body {
   background: var(--bg); color: var(--text);
   font-family: 'DM Sans', sans-serif;
   min-height: 100vh; display: flex; flex-direction: column; align-items: center;
-  padding: max(env(safe-area-inset-top), 12px) 4px 80px 4px; user-select: none; -webkit-user-select: none;
+  padding-top: 20px;
+  padding-top: env(safe-area-inset-top, 20px);
+  padding-left: 4px; padding-right: 4px; padding-bottom: 80px;
+  user-select: none; -webkit-user-select: none;
 }
 header {
   width: 100%; max-width: 960px; display: flex; align-items: center;
@@ -40,8 +44,10 @@ header .sub { font-size: 0.44rem; color: var(--dim); letter-spacing: 2px; text-t
   transition: all 0.1s; height: 32px; flex-shrink: 0; white-space: nowrap;
   touch-action: manipulation;
 }
+.btn.on { background: var(--text); color: var(--bg); }
 .btn.active { background: var(--text); color: var(--bg); }
-.btn:hover, .btn:active { background: var(--text); color: var(--bg); }
+@media (hover: hover) { .btn:hover { background: var(--text); color: var(--bg); } }
+.btn:active { opacity: 0.75; }
 .bpm-wrap { display: flex; align-items: center; gap: 6px; flex: 1; }
 .bpm-val { font-size: 0.9rem; font-weight: 700; min-width: 32px; text-align: right; flex-shrink: 0; }
 input[type=range] { -webkit-appearance: none; flex: 1; height: 3px; background: var(--text); outline: none; }
@@ -1443,7 +1449,7 @@ function playRhodes(freq, durSec, isAccent, time, tr) {
 // ── Pluck Bass: resonant attack, fast decay ──
 function playPluckBass(freq, durSec, isAccent, time, tr) {
   if (!ctx || !freq) return;
-  const vel = isAccent ? 1.8 : 1.3;
+  const vel = isAccent ? 3.6 : 2.6;
   const dest = getSynthConnectNode(tr);
 
   const osc = ctx.createOscillator(); osc.type = 'sawtooth'; osc.frequency.value = freq;
@@ -1505,7 +1511,7 @@ function playMotownBass(freq, durSec, isAccent, time, tr) {
 const _punkGlide = {};
 function playPunkBass(freq, durSec, isAccent, time, tr) {
   if (!ctx || !freq) return;
-  const vel = isAccent ? 0.85 : 0.62;
+  const vel = isAccent ? 0.478 : 0.349;
   const dest = getSynthConnectNode(tr);
   const startFreq = _punkGlide[tr] || freq;
   _punkGlide[tr] = freq;
