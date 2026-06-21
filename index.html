@@ -37,10 +37,17 @@ header {
 }
 header h1 { font-family: 'DM Sans', sans-serif; font-size: 1.4rem; letter-spacing: 4px; }
 header .sub { font-size: 0.44rem; color: var(--dim); letter-spacing: 2px; text-transform: uppercase; }
-.tape-reels { display: flex; gap: 68px; align-items: center; margin-right: 68px; }
+.tape-reels { display: flex; gap: 78px; align-items: center; margin-right: 68px; }
+.reel-wrap { position: relative; width: 42px; height: 42px; flex-shrink: 0; }
 .reel { width: 42px; height: 42px; display: block; }
+.reel-hole {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--bg); pointer-events: none;
+}
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-.reel.spinning { animation: spin 1.44s linear infinite; transform-origin: center; }
+.reel-wrap.spinning { animation: spin 2s linear infinite; transform-origin: center; }
 .transport {
   width: 100%; max-width: 960px; display: flex; align-items: stretch;
   gap: 5px; margin-bottom: 6px;
@@ -416,9 +423,15 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BOOMBOT</h1>
-  <div class="tape-reels" id="tapeReels">
-    <img class="reel" id="reel1" src="tape_spool.png" alt="">
-    <img class="reel" id="reel2" src="tape_spool.png" alt="">
+  <div id="tapeReels" class="tape-reels">
+    <div class="reel-wrap">
+      <img class="reel" id="reel1" src="tape_spool.png" alt="">
+      <div class="reel-hole"></div>
+    </div>
+    <div class="reel-wrap">
+      <img class="reel" id="reel2" src="tape_spool.png" alt="">
+      <div class="reel-hole"></div>
+    </div>
   </div>
 </header>
 
@@ -914,7 +927,7 @@ function togglePlay() {
     currentStep = -1; nextStepTime = ctx.currentTime + 0.05;
     scheduleInterval = setInterval(scheduler, SCHEDULE_MS);
     btn.classList.add('active'); btn.textContent = 'STOP';
-    document.querySelectorAll('.reel').forEach(r => r.classList.add('spinning'));
+    document.querySelectorAll('.reel-wrap').forEach(r => r.classList.add('spinning'));
     // if beat is armed, restart it in sync
     if (beatPlaying) {
       clearInterval(beatInterval);
@@ -924,7 +937,7 @@ function togglePlay() {
   } else {
     clearInterval(scheduleInterval); scheduleInterval = null;
     btn.classList.remove('active'); btn.textContent = 'PLAY';
-    document.querySelectorAll('.reel').forEach(r => r.classList.remove('spinning'));
+    document.querySelectorAll('.reel-wrap').forEach(r => r.classList.remove('spinning'));
     // stop beat audio but leave beatPlaying armed
     if (beatPlaying) { clearInterval(beatInterval); beatInterval = null; }
     document.querySelectorAll('.step-cell').forEach(el => el.classList.remove('playing'));
