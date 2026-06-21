@@ -549,22 +549,27 @@ function playBuffer(key, isAccent, time, tr) {
   const fxVal = trackFx[tr];
   const on = fxVal && (fxVal.x > 0 || fxVal.y > 0);
   if (tr !== undefined && trackFxNodes[tr] && on) {
-    const envGain = ctx.createGain();
-    src.connect(instrumentGain); instrumentGain.connect(envGain);
-    envGain.connect(trackFxNodes[tr].fxSend);
-    // no dry signal when FX is active
-    const atkDelay = fxVal.y * 0.08;
-    const tailLen = buf.duration * (1 - fxVal.y * 0.85);
-    envGain.gain.setValueAtTime(0, time);
-    envGain.gain.linearRampToValueAtTime(1, time + atkDelay + 0.002);
-    envGain.gain.setValueAtTime(1, time + tailLen);
-    envGain.gain.linearRampToValueAtTime(0, time + tailLen + 0.01);
+    src.connect(instrumentGain); instrumentGain.connect(trackFxNodes[tr].fxSend);
   } else if (tr !== undefined && trackFxNodes[tr]) {
     src.connect(instrumentGain); instrumentGain.connect(trackFxNodes[tr].dryGain);
   } else {
     src.connect(instrumentGain); instrumentGain.connect((tr !== undefined && trackGainNodes[tr]) ? trackGainNodes[tr] : masterGain);
   }
   src.start(time);
+
+  // Slapback: Y axis = delay time 20ms–1000ms, at half volume
+  if (on && fxVal.y > 0) {
+    const slapDelay = 0.02 + fxVal.y * 0.98; // 20ms–1000ms
+    const slapSrc = ctx.createBufferSource(); slapSrc.buffer = buf;
+    const slapGain = ctx.createGain();
+    slapGain.gain.value = (key === 'shak') ? 0.25 : 0.5;
+    if (tr !== undefined && trackFxNodes[tr] && on) {
+      slapSrc.connect(slapGain); slapGain.connect(trackFxNodes[tr].fxSend);
+    } else {
+      slapSrc.connect(slapGain); slapGain.connect((tr !== undefined && trackGainNodes[tr]) ? trackGainNodes[tr] : masterGain);
+    }
+    slapSrc.start(time + slapDelay);
+  }
 }
 
 // ── XY Pad overlay ──
@@ -711,6 +716,19 @@ function scheduler() {
           if (key === 'sleg')    playSynthLeg(freq, dur, val === 2, t, tr);
           if (key === 'sparkle') playSparkle(freq, dur, val === 2, t, tr);
           if (key === 'rhodes')  playRhodes(freq, dur, val === 2, t, tr);
+          // Slapback delay for synth voices
+          const sfx = trackFx[tr];
+          if (sfx && sfx.y > 0) {
+            const slapDelay = 0.02 + sfx.y * 0.98;
+            const slapDur = Math.min(dur, stepDuration());
+            if (key === 'sbass')   playSynthBass(freq, slapDur, false, t + slapDelay, tr);
+            if (key === 'sbass2')  playPluckBass(freq, slapDur, false, t + slapDelay, tr);
+            if (key === 'sbass3')  playMotownBass(freq, slapDur, false, t + slapDelay, tr);
+            if (key === 'sstring') playStringSynth(freq, slapDur, false, t + slapDelay, tr);
+            if (key === 'sleg')    playSynthLeg(freq, slapDur, false, t + slapDelay, tr);
+            if (key === 'sparkle') playSparkle(freq, slapDur, false, t + slapDelay, tr);
+            if (key === 'rhodes')  playRhodes(freq, slapDur, false, t + slapDelay, tr);
+          }
         } else {
           playBuffer(key, val === 2, t, tr);
         }
@@ -1073,9 +1091,9 @@ function playRhodes(freq, durSec, isAccent, time, tr) {
   modulator.frequency.exponentialRampToValueAtTime(Math.max(modFreq, 1), time + glide);
 
   // Modulation index decays quickly — gives the tine bell click then warm tone
-  modGain.gain.setValueAtTime(freq * 6, time);
-  modGain.gain.exponentialRampToValueAtTime(freq * 0.3, time + 0.08);
-  modGain.gain.exponentialRampToValueAtTime(freq * 0.05, time + durSec * 0.6);
+  modGain.gain.setValueAtTime(freq * 1.8, time);
+  modGain.gain.exponentialRampToValueAtTime(freq * 0.4, time + 0.15);
+  modGain.gain.exponentialRampToValueAtTime(freq * 0.08, time + durSec * 0.7);
 
   // Amp envelope: sharp attack, medium sustain, natural decay
   ampEnv.gain.setValueAtTime(0, time);
