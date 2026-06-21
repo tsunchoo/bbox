@@ -1501,6 +1501,10 @@ function buildUI() {
         if (ctx) setFxActive(tr, newVal);
         fxBtn.classList.toggle('on', newVal.x > 0 || newVal.y > 0);
         markModified();
+      } else if (didRelease && fxDidHold) {
+        // After hold opened XY pad — if FX is on and user taps again to dismiss, turn off
+        // (no-op here; turning off happens via next tap)
+        fxDidHold = false;
       }
     };
     fxBtn.addEventListener('mousedown', startFxHold);
