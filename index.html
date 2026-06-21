@@ -218,14 +218,16 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
   transition: background 0.05s, color 0.05s; touch-action: manipulation;
   user-select: none;
 }
-.sound-option:hover, .sound-option.active { background: var(--text); color: var(--bg); }
+.sound-option:hover { background: var(--text); color: var(--bg); }
+.sound-option.active { background: var(--bg); color: var(--text); border-color: var(--text); border-width: 3px; }
 /* Instrument group colours */
 .inst-kit   { background: #1a3a6b; color: #fff; border-color: #1a3a6b; }
 .inst-perc  { background: #2a7a3a; color: #fff; border-color: #2a7a3a; }
 .inst-tonal { background: #ff6600; color: #fff; border-color: #cc5200; }
-.inst-kit.active,   .inst-kit:hover   { background: #0d1f40; color: #fff; }
-.inst-perc.active,  .inst-perc:hover  { background: #1a5228; color: #fff; }
-.inst-tonal.active, .inst-tonal:hover { background: #cc5200; color: #fff; }
+.inst-kit:hover   { background: #0d1f40; color: #fff; }
+.inst-perc:hover  { background: #1a5228; color: #fff; }
+.inst-tonal:hover { background: #cc5200; color: #fff; }
+.inst-kit.active, .inst-perc.active, .inst-tonal.active { background: var(--bg); color: var(--text); border-color: var(--text); border-width: 3px; }
 /* Track name buttons inherit group color */
 .track-name-btn.inst-kit   { background: #1a3a6b; color: #fff; border-color: #1a3a6b; }
 .track-name-btn.inst-perc  { background: #2a7a3a; color: #fff; border-color: #2a7a3a; }
@@ -462,7 +464,7 @@ const INSTRUMENTS = {
   bongLo: { name: 'BONGO LO',    soft: 'Sounds/BongLo50.wav', accent: 'Sounds/BongLo100.wav', group: 'perc' },
   cowb:   { name: 'COWBELL',     soft: 'Sounds/Cowb50.wav',   accent: 'Sounds/Cowb100.wav',   group: 'perc' },
   sbass:  { name: 'SYNTH BASS',  soft: null, accent: null, group: 'tonal' },
-  sbass2: { name: 'PLUCK BASS',  soft: null, accent: null, group: 'tonal' },
+  ngate:  { name: 'NOISE',       soft: null, accent: null, group: 'perc'  },
   sbass3: { name: 'JAMES BASS',  soft: null, accent: null, group: 'tonal' },
   sstring:{ name: 'STRINGS',     soft: null, accent: null, group: 'tonal' },
   sleg:   { name: 'STRINGS+',    soft: null, accent: null, group: 'tonal' },
@@ -595,7 +597,7 @@ function playBuffer(key, isAccent, time, tr) {
   if (key === 'ssnare') { playSynthSnare(isAccent, time, tr); return; }
   if (key === 'shihat') { playSynthHihat(isAccent, time, tr); return; }
   if (key === 'sbass')   { return; } // handled in scheduler with legato duration
-  if (key === 'sbass2')  { return; }
+  if (key === 'ngate')   { return; } // handled in scheduler
   if (key === 'sbass3')  { return; }
   if (key === 'sstring') { return; } // handled in scheduler
   if (key === 'sleg')    { return; } // handled in scheduler
@@ -808,7 +810,7 @@ function scheduler() {
       const val = grid[tr][gs];
       if (val > 0) {
         const key = trackInstruments[tr];
-        if (key === 'sbass' || key === 'sbass2' || key === 'sbass3' || key === 'sstring' || key === 'sleg' || key === 'sparkle' || key === 'rhodes') {
+        if (key === 'sbass' || key === 'sbass3' || key === 'sstring' || key === 'sleg' || key === 'sparkle' || key === 'rhodes') {
           const scale = trackBassScale[tr] || [110];
           const noteIdx = gs % scale.length;
           const freq = scale[noteIdx];
@@ -836,7 +838,6 @@ function scheduler() {
             dur = Math.max(0.01, dur * (1 - trackFx[tr].x) + 0.01 * trackFx[tr].x);
           }
           if (key === 'sbass')   playSynthBass(freq, dur, val === 2, t, tr);
-          if (key === 'sbass2')  playPluckBass(freq, dur, val === 2, t, tr);
           if (key === 'sbass3')  playMotownBass(freq, dur, val === 2, t, tr);
           if (key === 'sstring') playStringSynth(freq, dur, val === 2, t, tr);
           if (key === 'sleg')    playSynthLeg(freq, dur, val === 2, t, tr);
@@ -848,15 +849,23 @@ function scheduler() {
             const slapDelay = 0.02 + sfx.y * 0.98;
             const slapDur = Math.min(dur, stepDuration());
             if (key === 'sbass')   playSynthBass(freq, slapDur, false, t + slapDelay, tr);
-            if (key === 'sbass2')  playPluckBass(freq, slapDur, false, t + slapDelay, tr);
             if (key === 'sbass3')  playMotownBass(freq, slapDur, false, t + slapDelay, tr);
             if (key === 'sstring') playStringSynth(freq, slapDur, false, t + slapDelay, tr);
             if (key === 'sleg')    playSynthLeg(freq, slapDur, false, t + slapDelay, tr);
             if (key === 'sparkle') playSparkle(freq, slapDur, false, t + slapDelay, tr);
             if (key === 'rhodes')  playRhodes(freq, slapDur, false, t + slapDelay, tr);
           }
+        } else if (key === 'ngate') {
+          // Noise gate triggered by its own grid notes
+          triggerNoiseGate(tr, val === 2, t);
         } else {
           playBuffer(key, val === 2, t, tr);
+          // If any other track has ngate, trigger it from this hit
+          for (let ng = 0; ng < NUM_TRACKS; ng++) {
+            if (ng !== tr && !trackMuted[ng] && trackInstruments[ng] === 'ngate') {
+              triggerNoiseGate(ng, val === 2, t);
+            }
+          }
         }
       }
     }
@@ -1034,7 +1043,7 @@ const trackBassScale = {}; // tr -> [freq, ...]
 
 // Global scale root — shared by all tonal tracks, cleared by CLEAR
 let globalScaleRoot = null;
-const TONAL_KEYS = new Set(['sbass','sbass2','sbass3','sstring','sleg','sparkle','rhodes']);
+const TONAL_KEYS = new Set(['sbass','sbass3','sstring','sleg','sparkle','rhodes']);
 
 function buildScaleFromRoot(root) {
   const scale = [];
@@ -1229,32 +1238,41 @@ function playRhodes(freq, durSec, isAccent, time, tr) {
   lfo.start(time); lfo.stop(time + decayLen + 0.1);
 }
 // ── Pluck Bass: resonant attack, fast decay ──
-function playPluckBass(freq, durSec, isAccent, time, tr) {
-  if (!ctx || !freq) return;
-  const vel = isAccent ? 2.55 : 1.84;
-  const dest = getSynthConnectNode(tr);
+// ── Noise Gate: continuous white noise gated by hits from a random other track ──
+const _noiseGateNodes = {};
 
-  const osc = ctx.createOscillator(); osc.type = 'sawtooth'; osc.frequency.value = freq;
-  const sub = ctx.createOscillator(); sub.type = 'sine'; sub.frequency.value = freq * 0.5;
-  const sawG = ctx.createGain(); sawG.gain.value = 0.5;
-  const subG = ctx.createGain(); subG.gain.value = 0.4;
+function initNoiseGate(tr) {
+  if (!ctx) return;
+  if (_noiseGateNodes[tr]) { try { _noiseGateNodes[tr].src.stop(); } catch(e) {} }
+  const dest = (trackGainNodes[tr]) ? trackGainNodes[tr] : masterGain;
+  const bufLen = ctx.sampleRate * 2;
+  const buf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < bufLen; i++) d[i] = Math.random() * 2 - 1;
+  const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+  const filt = ctx.createBiquadFilter(); filt.type = 'bandpass'; filt.Q.value = 2.5; filt.frequency.value = 800;
+  const gate = ctx.createGain(); gate.gain.value = 0;
+  src.connect(filt); filt.connect(gate); gate.connect(dest);
+  src.start();
+  _noiseGateNodes[tr] = { src, gate, filt };
+}
 
-  // Resonant filter with snappy open-close
-  const filt = ctx.createBiquadFilter(); filt.type = 'bandpass'; filt.Q.value = 8;
-  const peakFreq = freq * 6;
-  filt.frequency.setValueAtTime(peakFreq * 2.5, time);
-  filt.frequency.exponentialRampToValueAtTime(freq * 0.9, time + 0.04);
-
-  const ampEnv = ctx.createGain();
-  ampEnv.gain.setValueAtTime(0, time);
-  ampEnv.gain.linearRampToValueAtTime(vel, time + 0.003);
-  ampEnv.gain.exponentialRampToValueAtTime(vel * 0.3, time + 0.06);
-  ampEnv.gain.exponentialRampToValueAtTime(0.001, time + Math.min(durSec, 0.35));
-
-  osc.connect(sawG); sub.connect(subG);
-  sawG.connect(filt); subG.connect(filt); filt.connect(ampEnv); ampEnv.connect(dest);
-  osc.start(time); osc.stop(time + 0.4);
-  sub.start(time); sub.stop(time + 0.4);
+function triggerNoiseGate(tr, isAccent, time) {
+  if (!ctx || !_noiseGateNodes[tr]) return;
+  const { gate, filt } = _noiseGateNodes[tr];
+  const vel = isAccent ? 0.55 : 0.35;
+  const sweepStart = isAccent ? 3000 : 1200;
+  const sweepEnd   = isAccent ? 200  : 400;
+  const dur = stepDuration() * 0.85;
+  filt.frequency.cancelScheduledValues(time);
+  filt.frequency.setValueAtTime(sweepStart, time);
+  filt.frequency.exponentialRampToValueAtTime(sweepEnd, time + dur * 0.6);
+  gate.gain.cancelScheduledValues(time);
+  gate.gain.setValueAtTime(0, time);
+  gate.gain.linearRampToValueAtTime(vel, time + 0.004);
+  gate.gain.setValueAtTime(vel * 0.7, time + dur * 0.3);
+  gate.gain.exponentialRampToValueAtTime(0.0001, time + dur);
+  gate.gain.setValueAtTime(0, time + dur + 0.005);
 }
 
 // ── James Bass: dry finger-picked Motown feel ──
@@ -1410,7 +1428,11 @@ function setTrackNameColor(tr, key) {
 }
 
 function selectSound(tr, k) {
+  if (trackInstruments[tr] === 'ngate' && k !== 'ngate' && _noiseGateNodes[tr]) {
+    try { _noiseGateNodes[tr].src.stop(); } catch(e) {} delete _noiseGateNodes[tr];
+  }
   trackInstruments[tr] = k;
+  if (k === 'ngate' && ctx) initNoiseGate(tr);
   const btn = document.getElementById(`tbtn-${tr}`); if (btn) btn.textContent = INSTRUMENTS[k].name;
   setTrackNameColor(tr, k);
   const sb = document.getElementById(`swpbtn-${tr}`);
@@ -2022,6 +2044,10 @@ function fullClear() {
   if (beatPlaying) toggleBeat();
   // Stop any active auto-shifts
   Object.values(autoShiftStops).forEach(stop => stop());
+  Object.keys(_noiseGateNodes).forEach(tr => {
+    try { _noiseGateNodes[+tr].src.stop(); } catch(e) {}
+    delete _noiseGateNodes[+tr];
+  });
   randAllLevel = 0;
   const defaultInstruments = ['shak','sleg','sparkle','sbass3','congHi','congLo'];
   for (let tr = 0; tr < NUM_TRACKS; tr++) {
@@ -2083,7 +2109,7 @@ function randAll(mode) {
   mode = mode || 'all';
   const level = randAllLevel;
   randAllLevel = (randAllLevel + 1) % 3;
-  const bassKeys = new Set(['sbass','sbass2','sbass3','sbass4']);
+  const bassKeys = new Set(['sbass','sbass3','sbass4']);
   const percKeys = Object.keys(INSTRUMENTS).filter(k => !TONAL_KEYS.has(k) && k !== 'ngate');
   const tonalKeys = Object.keys(INSTRUMENTS).filter(k => TONAL_KEYS.has(k));
   const allKeys = Object.keys(INSTRUMENTS);
@@ -2302,38 +2328,34 @@ function placeNotes(tr, noteCount, accentRatio, level) {
   const accentSet = new Set(shuffled.slice(0, accentCount));
   positions.forEach(p => { grid[tr][p] = accentSet.has(p) ? 2 : 1; });
 
-  // Level 2 only: enforce max 4 consecutive notes, max 2 consecutive accents
-  if (level === 2) {
-    let changed = true;
-    while (changed) {
-      changed = false;
-      // Check consecutive notes (any value > 0)
-      for (let s = 0; s < NUM_STEPS; s++) {
-        let run = 0;
-        for (let i = 0; i < 5; i++) {
-          if (grid[tr][(s + i) % NUM_STEPS] > 0) run++;
-          else break;
-        }
-        if (run >= 5) {
-          // Remove the last note in the run
-          grid[tr][(s + 4) % NUM_STEPS] = 0;
-          changed = true;
-        }
-      }
-      // Check consecutive accents (value === 2)
-      for (let s = 0; s < NUM_STEPS; s++) {
-        let run = 0;
-        for (let i = 0; i < 3; i++) {
-          if (grid[tr][(s + i) % NUM_STEPS] === 2) run++;
-          else break;
-        }
-        if (run >= 3) {
-          // Downgrade 3rd accent to soft
-          grid[tr][(s + 2) % NUM_STEPS] = 1;
-          changed = true;
-        }
+  const key = trackInstruments[tr];
+  const maxConsec = (key === 'skick' || key === 'ssnare' || key === 'clap' || key === 'cowb') ? 3 : (level === 2 ? 4 : 99);
+  const maxAccentConsec = level === 2 ? 2 : 99;
+
+  // Iterate until no violations remain
+  for (let pass = 0; pass < NUM_STEPS; pass++) {
+    let anyChange = false;
+    for (let s = 0; s < NUM_STEPS; s++) {
+      if (grid[tr][s] === 0) continue;
+      // Count run starting at s
+      let run = 0;
+      while (run < NUM_STEPS && grid[tr][(s + run) % NUM_STEPS] > 0) run++;
+      if (run > maxConsec) {
+        grid[tr][(s + maxConsec) % NUM_STEPS] = 0;
+        anyChange = true;
       }
     }
+    // Check accent runs
+    for (let s = 0; s < NUM_STEPS; s++) {
+      if (grid[tr][s] !== 2) continue;
+      let run = 0;
+      while (run < NUM_STEPS && grid[tr][(s + run) % NUM_STEPS] === 2) run++;
+      if (run > maxAccentConsec) {
+        grid[tr][(s + maxAccentConsec) % NUM_STEPS] = 1;
+        anyChange = true;
+      }
+    }
+    if (!anyChange) break;
   }
 }
 
@@ -2354,7 +2376,7 @@ function randomizeTrack(tr) {
     if (vb) { const f = vb.querySelector('.track-vol-fill'); if (f) f.style.width = Math.round(defaultVol * 100) + '%'; }
   }
 
-  if (trackInstruments[tr] === 'sbass' || trackInstruments[tr] === 'sbass2' || trackInstruments[tr] === 'sbass3' || trackInstruments[tr] === 'sstring' || trackInstruments[tr] === 'sleg' || trackInstruments[tr] === 'sparkle' || trackInstruments[tr] === 'rhodes') {
+  if (trackInstruments[tr] === 'sbass' || trackInstruments[tr] === 'sbass3' || trackInstruments[tr] === 'sstring' || trackInstruments[tr] === 'sleg' || trackInstruments[tr] === 'sparkle' || trackInstruments[tr] === 'rhodes') {
     randomizeBassTrack(tr, level); return;
   }
 
@@ -2501,6 +2523,7 @@ async function initAudio() {
     for (let i=0; i<NUM_TRACKS; i++) {
       const g = ctx.createGain(); g.gain.value = trackVolume[i]; g.connect(masterGain); trackGainNodes[i] = g;
       trackFxNodes[i] = buildFxChain(g);
+      if (trackInstruments[i] === 'ngate') initNoiseGate(i);
     }
     const unlock = ctx.createBuffer(1,1,ctx.sampleRate);
     unlock.getChannelData(0)[0]=0.001;
