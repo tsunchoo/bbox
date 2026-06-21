@@ -1265,6 +1265,16 @@ function buildUI() {
     nameBtn.addEventListener('touchend', e => { e.preventDefault(); if (ht) { clearTimeout(ht); ht = null; trackMuted[tr] = !trackMuted[tr]; updateTrackMute(tr); markModified(); } }, { passive: false });
     ctrlRow.appendChild(nameBtn);
 
+    // Shift left
+    const btnL = document.createElement('button'); btnL.className = 'shift-btn'; btnL.textContent = '<';
+    wireShiftButton(btnL, tr, -1);
+    ctrlRow.appendChild(btnL);
+
+    // Shift right
+    const btnR = document.createElement('button'); btnR.className = 'shift-btn right'; btnR.textContent = '>';
+    wireShiftButton(btnR, tr, +1);
+    ctrlRow.appendChild(btnR);
+
     // Sweep button
     const sweepBtn = document.createElement('button'); sweepBtn.className = 'track-ctrl-icon-btn'; sweepBtn.id = `swpbtn-${tr}`;
     sweepBtn.textContent = 'S'; sweepBtn.classList.toggle('sweep-on', trackSweep[tr]);
@@ -1298,16 +1308,6 @@ function buildUI() {
     fxBtn.addEventListener('touchstart', e => { e.preventDefault(); startFxHold(); }, { passive: false });
     fxBtn.addEventListener('touchend', e => { e.preventDefault(); endFxHold(true); }, { passive: false });
     ctrlRow.appendChild(fxBtn);
-
-    // Shift left — tap shifts once, hold auto-shifts continuously every 4 bars in sync with beat
-    const btnL = document.createElement('button'); btnL.className = 'shift-btn'; btnL.textContent = '<';
-    wireShiftButton(btnL, tr, -1);
-    ctrlRow.appendChild(btnL);
-
-    // Shift right
-    const btnR = document.createElement('button'); btnR.className = 'shift-btn right'; btnR.textContent = '>';
-    wireShiftButton(btnR, tr, +1);
-    ctrlRow.appendChild(btnR);
 
     // R button — randomize notes across the track, regenerating every 4 bars while held
     const randBtn = document.createElement('button'); randBtn.className = 'track-ctrl-icon-btn rand-btn'; randBtn.id = `randbtn-${tr}`;
