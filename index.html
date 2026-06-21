@@ -222,17 +222,17 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 /* Instrument group colours */
 .inst-kit   { background: #1a3a6b; color: #fff; border-color: #1a3a6b; }
 .inst-perc  { background: #2a7a3a; color: #fff; border-color: #2a7a3a; }
-.inst-tonal { background: #e8845a; color: #fff; border-color: #c06a44; }
+.inst-tonal { background: #ff6600; color: #fff; border-color: #cc5200; }
 .inst-kit.active,   .inst-kit:hover   { background: #0d1f40; color: #fff; }
 .inst-perc.active,  .inst-perc:hover  { background: #1a5228; color: #fff; }
-.inst-tonal.active, .inst-tonal:hover { background: #c06a44; color: #fff; }
+.inst-tonal.active, .inst-tonal:hover { background: #cc5200; color: #fff; }
 /* Track name buttons inherit group color */
 .track-name-btn.inst-kit   { background: #1a3a6b; color: #fff; border-color: #1a3a6b; }
 .track-name-btn.inst-perc  { background: #2a7a3a; color: #fff; border-color: #2a7a3a; }
-.track-name-btn.inst-tonal { background: #e8845a; color: #fff; border-color: #c06a44; }
+.track-name-btn.inst-tonal { background: #ff6600; color: #fff; border-color: #cc5200; }
 .track-name-btn.has-notes.inst-kit   { background: #1a3a6b; }
 .track-name-btn.has-notes.inst-perc  { background: #2a7a3a; }
-.track-name-btn.has-notes.inst-tonal { background: #e8845a; }
+.track-name-btn.has-notes.inst-tonal { background: #ff6600; }
 .track-name-btn.playing { background: var(--playhead) !important; color: #fff !important; }
 
 /* ── Vol overlay ── */
@@ -1367,7 +1367,7 @@ function toggleBeat() {
   beatPlaying = !beatPlaying;
   const btn = document.getElementById('beatBtn');
   if (beatPlaying) {
-    beatStep = -1;
+    if (beatStep === undefined || beatStep < 0) beatStep = -1; // only reset if not pre-set
     if (playing && nextStepTime > ctx.currentTime) {
       beatNextTime = nextStepTime;
     } else {
@@ -2183,7 +2183,7 @@ function snapshotState() {
     trackRLevel: [...trackRLevel],
     trackBassScale: Object.fromEntries(Object.entries(trackBassScale).map(([k,v])=>[k,[...v]])),
     globalScaleRoot,
-    bpm, masterVol, beatOn: beatPlaying
+    bpm, masterVol, beatOn: beatPlaying, beatStep: beatStep
   };
 }
 function restoreState(snap) {
@@ -2215,7 +2215,13 @@ function restoreState(snap) {
   document.getElementById('bpmVal').textContent=bpm;
   if (snap.masterVol !== undefined) setMasterVol(snap.masterVol);
   const snapBeat = snap.beatOn || false;
-  if (snapBeat !== beatPlaying) toggleBeat();
+  if (snapBeat && !beatPlaying) {
+    // Restore beat step position then start
+    beatStep = (snap.beatStep !== undefined) ? snap.beatStep : -1;
+    toggleBeat();
+  } else if (!snapBeat && beatPlaying) {
+    toggleBeat(); // turn it off
+  }
 }
 function markModified() {
   if (activeSlot < 0) return;
