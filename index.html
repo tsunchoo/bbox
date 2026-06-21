@@ -1884,10 +1884,13 @@ function audioBufferToWav(buffer, tempoHint) {
 function fullClear() {
   if (playing) togglePlay();
   if (beatPlaying) toggleBeat();
+  // Stop any active auto-shifts
+  Object.values(autoShiftStops).forEach(stop => stop());
   const defaultInstruments = ['shak','sleg','sparkle','sbass3','congHi','congLo'];
   for (let tr = 0; tr < NUM_TRACKS; tr++) {
     grid[tr].fill(0); trackOffset[tr] = 0; trackPatternState[tr] = 0;
     trackMuted[tr] = false; trackSweep[tr] = false; trackChop[tr] = false;
+    trackRLevel[tr] = 0;
     trackVolume[tr] = tr === 1 ? 0.505 : 0.8;
     trackFx[tr] = { x: 0, y: 0 };
     trackInstruments[tr] = defaultInstruments[tr] || 'tamb';
@@ -1896,9 +1899,12 @@ function fullClear() {
       if (trackGainNodes[tr]) trackGainNodes[tr].gain.setTargetAtTime(trackVolume[tr], ctx.currentTime, 0.01);
     }
     const tb = document.getElementById(`tbtn-${tr}`);
-    if (tb) { tb.textContent = INSTRUMENTS[trackInstruments[tr]]?.name||(tr+1); tb.classList.remove('muted'); }
+    if (tb) { tb.textContent = INSTRUMENTS[trackInstruments[tr]]?.name||(tr+1); tb.classList.remove('muted','has-notes','shifting'); }
     const fb = document.getElementById(`fxbtn-${tr}`); if (fb) fb.classList.remove('on');
-    const sb = document.getElementById(`swpbtn-${tr}`); if (sb) sb.classList.remove('sweep-on');
+    const sb = document.getElementById(`swpbtn-${tr}`);
+    if (sb) { sb.classList.remove('sweep-on'); const tonal = TONAL_KEYS.has(trackInstruments[tr]); sb.textContent = tonal ? 'E' : 'S'; }
+    const rb = document.getElementById(`randbtn-${tr}`); if (rb) rb.classList.remove('pulsing');
+    const cr = document.getElementById(`ctrlrow-${tr}`); if (cr) cr.classList.remove('row-muted');
     const vb = document.getElementById(`vbar-${tr}`);
     if (vb) { vb.classList.remove('muted'); const f = vb.querySelector('.track-vol-fill'); if (f) f.style.width = Math.round(trackVolume[tr]*100)+'%'; }
     redrawTrackCells(tr);
@@ -2051,12 +2057,16 @@ function randomizeTrack(tr) {
   const level = trackRLevel[tr];
   trackRLevel[tr] = (level + 1) % 3;
 
-  // Reset volume to default
-  const defaultVol = (tr === 1) ? 0.505 : 0.8;
-  trackVolume[tr] = defaultVol;
-  if (trackGainNodes[tr] && ctx) trackGainNodes[tr].gain.setTargetAtTime(defaultVol, ctx.currentTime, 0.01);
-  const vb = document.getElementById(`vbar-${tr}`);
-  if (vb) { const f = vb.querySelector('.track-vol-fill'); if (f) f.style.width = Math.round(defaultVol * 100) + '%'; }
+  // Reset volume to default only if FX and S/E are both inactive
+  const fxOn = !!(trackFx[tr] && (trackFx[tr].x > 0 || trackFx[tr].y > 0));
+  const seOn = TONAL_KEYS.has(trackInstruments[tr]) ? !!trackChop[tr] : !!trackSweep[tr];
+  if (!fxOn && !seOn) {
+    const defaultVol = (tr === 1) ? 0.505 : 0.8;
+    trackVolume[tr] = defaultVol;
+    if (trackGainNodes[tr] && ctx) trackGainNodes[tr].gain.setTargetAtTime(defaultVol, ctx.currentTime, 0.01);
+    const vb = document.getElementById(`vbar-${tr}`);
+    if (vb) { const f = vb.querySelector('.track-vol-fill'); if (f) f.style.width = Math.round(defaultVol * 100) + '%'; }
+  }
 
   if (trackInstruments[tr] === 'sbass' || trackInstruments[tr] === 'sbass2' || trackInstruments[tr] === 'sbass3' || trackInstruments[tr] === 'sstring' || trackInstruments[tr] === 'sleg' || trackInstruments[tr] === 'sparkle' || trackInstruments[tr] === 'rhodes') {
     randomizeBassTrack(tr, level); return;
@@ -2099,12 +2109,15 @@ function wireShiftButton(btn, tr, dir) {
   btn.addEventListener('touchcancel', stop);
 }
 
-function wireRandomizeButton(btn, tr) {
+// Global registry so clearAll can stop all active auto-shifts
+const autoShiftStops = {};
+
   let shiftInterval = null, pulseInterval = null;
   let autoShifting = false, holdTimer = null, didHold = false;
 
   const startAutoShift = () => {
     autoShifting = true;
+    autoShiftStops[tr] = stopAutoShift;
     btn.classList.add('pulsing');
     const tbtn = document.getElementById(`tbtn-${tr}`);
     const barMs = stepDuration() * NUM_STEPS * 1000;
@@ -2130,6 +2143,7 @@ function wireRandomizeButton(btn, tr) {
     btn.classList.remove('pulsing');
     const tbtn = document.getElementById(`tbtn-${tr}`);
     if (tbtn) tbtn.classList.remove('shifting');
+    delete autoShiftStops[tr];
   };
 
   const onDown = () => {
