@@ -1379,7 +1379,34 @@ function buildUI() {
     wireShiftButton(btnR, tr, +1);
     ctrlRow.appendChild(btnR);
 
-    // Sweep button
+    // FX button — tap toggles FX on/off, hold opens XY pad
+    const fxBtn = document.createElement('button'); fxBtn.className = 'track-ctrl-icon-btn'; fxBtn.id = `fxbtn-${tr}`;
+    fxBtn.textContent = 'FX';
+    const fxVal = trackFx[tr]; fxBtn.classList.toggle('on', fxVal && (fxVal.x > 0 || fxVal.y > 0));
+    let fxHoldTimer = null, fxDidHold = false;
+    const startFxHold = () => {
+      fxDidHold = false;
+      fxHoldTimer = setTimeout(() => { fxDidHold = true; fxHoldTimer = null; openXYPad(tr); }, 400);
+    };
+    const endFxHold = (didRelease) => {
+      if (fxHoldTimer) { clearTimeout(fxHoldTimer); fxHoldTimer = null; }
+      if (didRelease && !fxDidHold) {
+        const cur = trackFx[tr], isOn = cur && (cur.x > 0 || cur.y > 0);
+        const newVal = isOn ? { x: 0, y: 0 } : { x: 0.5, y: 0.5 };
+        trackFx[tr] = newVal; xyPadLastPos = { ...newVal };
+        if (ctx) setFxActive(tr, newVal);
+        fxBtn.classList.toggle('on', newVal.x > 0 || newVal.y > 0);
+        markModified();
+      }
+    };
+    fxBtn.addEventListener('mousedown', startFxHold);
+    fxBtn.addEventListener('mouseup', () => endFxHold(true));
+    fxBtn.addEventListener('mouseleave', () => { if (fxHoldTimer) { clearTimeout(fxHoldTimer); fxHoldTimer = null; } });
+    fxBtn.addEventListener('touchstart', e => { e.preventDefault(); startFxHold(); }, { passive: false });
+    fxBtn.addEventListener('touchend', e => { e.preventDefault(); endFxHold(true); }, { passive: false });
+    ctrlRow.appendChild(fxBtn);
+
+    // Sweep / E button
     const sweepBtn = document.createElement('button'); sweepBtn.className = 'track-ctrl-icon-btn'; sweepBtn.id = `swpbtn-${tr}`;
     const isTonal = TONAL_KEYS.has(trackInstruments[tr]);
     sweepBtn.textContent = isTonal ? 'E' : 'S';
@@ -1396,34 +1423,6 @@ function buildUI() {
       markModified();
     });
     ctrlRow.appendChild(sweepBtn);
-
-    // FX button — tap toggles FX on/off, hold opens XY pad
-    const fxBtn = document.createElement('button'); fxBtn.className = 'track-ctrl-icon-btn'; fxBtn.id = `fxbtn-${tr}`;
-    fxBtn.textContent = 'FX';
-    const fxVal = trackFx[tr]; fxBtn.classList.toggle('on', fxVal && (fxVal.x > 0 || fxVal.y > 0));
-    let fxHoldTimer = null, fxDidHold = false;
-    const startFxHold = () => {
-      fxDidHold = false;
-      fxHoldTimer = setTimeout(() => { fxDidHold = true; fxHoldTimer = null; openXYPad(tr); }, 400);
-    };
-    const endFxHold = (didRelease) => {
-      if (fxHoldTimer) { clearTimeout(fxHoldTimer); fxHoldTimer = null; }
-      if (didRelease && !fxDidHold) {
-        // Short tap — toggle
-        const cur = trackFx[tr], isOn = cur && (cur.x > 0 || cur.y > 0);
-        const newVal = isOn ? { x: 0, y: 0 } : { x: 0.5, y: 0.5 };
-        trackFx[tr] = newVal; xyPadLastPos = { ...newVal };
-        if (ctx) setFxActive(tr, newVal);
-        fxBtn.classList.toggle('on', newVal.x > 0 || newVal.y > 0);
-        markModified();
-      }
-    };
-    fxBtn.addEventListener('mousedown', startFxHold);
-    fxBtn.addEventListener('mouseup', () => endFxHold(true));
-    fxBtn.addEventListener('mouseleave', () => { if (fxHoldTimer) { clearTimeout(fxHoldTimer); fxHoldTimer = null; } });
-    fxBtn.addEventListener('touchstart', e => { e.preventDefault(); startFxHold(); }, { passive: false });
-    fxBtn.addEventListener('touchend', e => { e.preventDefault(); endFxHold(true); }, { passive: false });
-    ctrlRow.appendChild(fxBtn);
 
     // R button — randomize notes across the track, regenerating every 4 bars while held
     const randBtn = document.createElement('button'); randBtn.className = 'track-ctrl-icon-btn rand-btn'; randBtn.id = `randbtn-${tr}`;
