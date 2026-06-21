@@ -1341,7 +1341,11 @@ function toggleBeat() {
   const btn = document.getElementById('beatBtn');
   if (beatPlaying) {
     beatStep = -1;
-    beatNextTime = ctx.currentTime + 0.02;
+    if (playing && nextStepTime > ctx.currentTime) {
+      beatNextTime = nextStepTime;
+    } else {
+      beatNextTime = ctx.currentTime + 0.05;
+    }
     beatInterval = setInterval(scheduleBeat, SCHEDULE_MS);
     btn.classList.add('active');
     if (!playing) togglePlay();
