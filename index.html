@@ -2302,8 +2302,10 @@ function placeNotes(tr, noteCount, accentRatio) {
 }
 
 function randomizeTrack(tr) {
-  const level = trackRLevel[tr];
-  trackRLevel[tr] = (level + 1) % 3;
+  const key = trackInstruments[tr];
+  const cappedLevel = (key === 'skick' || key === 'clap') ? Math.min(trackRLevel[tr], 1) : trackRLevel[tr];
+  const level = cappedLevel;
+  trackRLevel[tr] = (trackRLevel[tr] + 1) % 3;
 
   // Reset volume to default only if FX and S/E are both inactive
   const fxOn = !!(trackFx[tr] && (trackFx[tr].x > 0 || trackFx[tr].y > 0));
