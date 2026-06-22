@@ -57,6 +57,7 @@ header .sub { font-size: 0.44rem; color: var(--dim); letter-spacing: 2px; text-t
   touch-action: manipulation;
 }
 .btn.active { background: var(--text); color: var(--bg); }
+#playBtn.playing { background: var(--slot-saved); border-color: var(--slot-saved); color: #000; }
 .btn:active { opacity: 0.7; }
 
 #beatBtn.active { background: var(--playhead) !important; border-color: var(--playhead) !important; color: #fff !important; }
@@ -755,7 +756,7 @@ function togglePlay() {
   if (playing) {
     currentStep = -1; nextStepTime = ctx.currentTime + 0.05;
     scheduleInterval = setInterval(scheduler, SCHEDULE_MS);
-    btn.classList.add('active'); btn.textContent = 'STOP';
+    btn.classList.add('playing'); btn.textContent = 'STOP';
     updateBeatPulse();
     document.querySelectorAll('.reel-wrap').forEach(r => r.classList.add('spinning'));
     if (beatPlaying) {
@@ -770,7 +771,7 @@ function togglePlay() {
     }
   } else {
     clearInterval(scheduleInterval); scheduleInterval = null;
-    btn.classList.remove('active'); btn.textContent = 'PLAY';
+    btn.classList.remove('playing'); btn.textContent = 'PLAY';
     updateBeatPulse();
     document.querySelectorAll('.reel-wrap').forEach(r => r.classList.remove('spinning'));
     if (beatPlaying) { clearInterval(beatInterval); beatInterval = null; }
