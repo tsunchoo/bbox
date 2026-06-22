@@ -1882,7 +1882,78 @@ async function renderSlotToWav(snap) {
         s3.buffer=nb; s3.connect(hp); hp.connect(g); g.connect(offDest);
         g.gain.setValueAtTime(isAccent?0.35:0.22,t); g.gain.exponentialRampToValueAtTime(0.001,t+dur3); s3.start(t); continue;
       }
-      const buf = buffers[key]?.[isAccent ? 'accent' : 'soft']; if (!buf) continue;
+      const buf = buffers[key]?.[isAccent ? 'accent' : 'soft'];
+
+      // Synth voices — render into offline context
+      if (TONAL_KEYS.has(key)) {
+        const scale = snap.trackBassScale?.[tr];
+        if (!scale) continue;
+        let dur = 60 / slotBpm / 4;
+        for (let ld = 1; ld < NUM_STEPS; ld++) {
+          const ngs = (gs + ld) % NUM_STEPS;
+          if (slotGrid[ngs] > 0) { dur = ld * 60 / slotBpm / 4; break; }
+        }
+        const freq = scale[gs % scale.length];
+        if (!freq) continue;
+        const vel = isAccent ? 0.5 : 0.3;
+
+        if (key === 'sbass') {
+          const saw = offline.createOscillator(); saw.type = 'sawtooth'; saw.frequency.value = freq;
+          const sub = offline.createOscillator(); sub.type = 'sine'; sub.frequency.value = freq * 0.5;
+          const sawG = offline.createGain(); sawG.gain.value = 0.25;
+          const subG = offline.createGain(); subG.gain.value = 0.38;
+          const filt = offline.createBiquadFilter(); filt.type = 'lowpass'; filt.Q.value = 3.5; filt.frequency.value = freq * 3.5;
+          const env = offline.createGain();
+          env.gain.setValueAtTime(0,t); env.gain.linearRampToValueAtTime(vel,t+0.008);
+          env.gain.setValueAtTime(vel,t+dur*0.8); env.gain.linearRampToValueAtTime(0.001,t+dur);
+          saw.connect(sawG); sub.connect(subG); sawG.connect(filt); subG.connect(filt); filt.connect(env); env.connect(offDest);
+          saw.start(t); saw.stop(t+dur+0.05); sub.start(t); sub.stop(t+dur+0.05);
+        } else if (key === 'sbass3') {
+          const o1 = offline.createOscillator(); o1.type='sawtooth'; o1.frequency.value=freq; o1.detune.value=-3;
+          const o2 = offline.createOscillator(); o2.type='sawtooth'; o2.frequency.value=freq; o2.detune.value=3;
+          const os = offline.createOscillator(); os.type='sine'; os.frequency.value=freq*0.5;
+          const mix = offline.createGain(); mix.gain.value=0.3;
+          const filt = offline.createBiquadFilter(); filt.type='lowpass'; filt.Q.value=0.8; filt.frequency.value=freq*3;
+          const env = offline.createGain();
+          env.gain.setValueAtTime(0,t); env.gain.linearRampToValueAtTime(vel,t+0.004);
+          env.gain.exponentialRampToValueAtTime(vel*0.35,t+Math.min(dur*0.55,0.18));
+          env.gain.exponentialRampToValueAtTime(0.001,t+dur*0.85);
+          [o1,o2,os].forEach(o=>{ o.connect(mix); o.start(t); o.stop(t+dur+0.02); });
+          mix.connect(filt); filt.connect(env); env.connect(offDest);
+        } else if (key === 'sstring' || key === 'sleg') {
+          [0,6,-6,11].forEach(det => {
+            const osc = offline.createOscillator(); osc.type='sawtooth';
+            osc.frequency.value=freq; osc.detune.value=det;
+            const env = offline.createGain();
+            env.gain.setValueAtTime(0,t); env.gain.linearRampToValueAtTime(vel*0.04,t+0.08);
+            env.gain.setValueAtTime(vel*0.1,t+dur-0.1); env.gain.exponentialRampToValueAtTime(0.001,t+dur+0.3);
+            osc.connect(env); env.connect(offDest); osc.start(t); osc.stop(t+dur+0.4);
+          });
+        } else if (key === 'sparkle') {
+          const nBuf = offline.createBuffer(1,Math.ceil(sampleRate*0.18),sampleRate);
+          const nd = nBuf.getChannelData(0); for(let i=0;i<nd.length;i++) nd[i]=Math.random()*2-1;
+          const src2 = offline.createBufferSource(); src2.buffer=nBuf; src2.loop=true;
+          const lp = offline.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=freq*4; lp.Q.value=2.5;
+          const env = offline.createGain();
+          env.gain.setValueAtTime(0,t); env.gain.linearRampToValueAtTime(vel*0.6,t+0.002);
+          env.gain.exponentialRampToValueAtTime(0.001,t+0.18);
+          src2.connect(lp); lp.connect(env); env.connect(offDest); src2.start(t); src2.stop(t+0.2);
+        } else if (key === 'rhodes') {
+          const partials = [{ratio:1,amp:1,dm:1},{ratio:2,amp:0.18,dm:0.55},{ratio:3,amp:0.05,dm:0.35},{ratio:4,amp:0.02,dm:0.22}];
+          const decayLen = Math.min(dur+0.8,3.5);
+          partials.forEach(({ratio,amp,dm}) => {
+            const osc = offline.createOscillator(); osc.type='sine'; osc.frequency.value=freq*ratio;
+            const env = offline.createGain(); const pv=vel*0.6*amp;
+            env.gain.setValueAtTime(0,t); env.gain.linearRampToValueAtTime(pv,t+0.004);
+            env.gain.exponentialRampToValueAtTime(pv*0.6,t+0.04);
+            env.gain.exponentialRampToValueAtTime(0.001,t+decayLen*dm);
+            osc.connect(env); env.connect(offDest); osc.start(t); osc.stop(t+decayLen*dm+0.05);
+          });
+        }
+        continue;
+      }
+
+      if (!buf) continue;
       const src = offline.createBufferSource(); src.buffer = buf;
       if (fxOn) {
         const envGain = offline.createGain(); envGain.connect(fxSend);
