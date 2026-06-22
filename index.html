@@ -2291,7 +2291,7 @@ function snapshotState() {
     trackRLevel: [...trackRLevel],
     trackBassScale: Object.fromEntries(Object.entries(trackBassScale).map(([k,v])=>[k,[...v]])),
     globalScaleRoot,
-    bpm, masterVol, beatOn: beatPlaying, beatStep: beatStep
+    bpm, masterVol
   };
 }
 function restoreState(snap) {
@@ -2323,14 +2323,7 @@ function restoreState(snap) {
   document.getElementById('bpmSlider').value=bpm;
   document.getElementById('bpmVal').textContent=bpm;
   if (snap.masterVol !== undefined) setMasterVol(snap.masterVol);
-  const snapBeat = snap.beatOn || false;
-  if (snapBeat && !beatPlaying) {
-    // Restore beat step position then start
-    beatStep = (snap.beatStep !== undefined) ? snap.beatStep : -1;
-    toggleBeat();
-  } else if (!snapBeat && beatPlaying) {
-    toggleBeat(); // turn it off
-  }
+
 }
 function markModified() {
   // Any edit deactivates the active slot (turns it back to green)
