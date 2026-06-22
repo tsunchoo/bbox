@@ -537,18 +537,13 @@ function playBuffer(key, isAccent, time, tr) {
   const buf = buffers[key]?.[isAccent ? 'accent' : 'soft'];
   if (!buf) return;
 
-  // Sweep: play reversed sample leading into the note
-  if (tr !== undefined && trackSweep[tr]) {
-    const revLen = Math.min(buf.duration * 0.85, stepDuration() * 1.8);
-    const revBuf = reverseBuffer(buf, revLen);
-    if (revBuf) {
-      const revSrc = ctx.createBufferSource(); revSrc.buffer = revBuf;
-      revSrc.playbackRate.value = 0.65;
-      const revGain = ctx.createGain(); revGain.gain.value = 1.2;
-      const dest = getSynthConnectNode(tr);
-      revSrc.connect(revGain); revGain.connect(dest);
-      revSrc.start(Math.max(ctx.currentTime, time - revLen * 1.5));
-    }
+  // S: stutter gate — hard chop at 35% of step duration
+  if (tr !== undefined && trackSweep[tr] && trackEnvFilters[tr]) {
+    const chopLen = stepDuration() * 0.35;
+    const ef = trackEnvFilters[tr];
+    ef.frequency.cancelScheduledValues(time);
+    ef.frequency.setValueAtTime(22050, time);
+    // No filter action for samples — just amplitude gate via instrumentGain below
   }
   const src = ctx.createBufferSource(); src.buffer = buf;
   const instrumentGain = ctx.createGain();
@@ -563,9 +558,14 @@ function playBuffer(key, isAccent, time, tr) {
   } else {
     src.connect(instrumentGain); instrumentGain.connect((tr !== undefined && trackGainNodes[tr]) ? trackGainNodes[tr] : masterGain);
   }
+  // Stutter gate: hard cut after chopLen
+  if (tr !== undefined && trackSweep[tr]) {
+    const chopLen = stepDuration() * 0.35;
+    instrumentGain.gain.setValueAtTime(instrumentGain.gain.value, time);
+    instrumentGain.gain.setValueAtTime(instrumentGain.gain.value, time + chopLen);
+    instrumentGain.gain.linearRampToValueAtTime(0, time + chopLen + 0.008);
+  }
   src.start(time);
-
-
 }
 
 
@@ -581,6 +581,7 @@ const trackVolume = [0.8, 0.505, 0.8, 0.8, 0.8, 0.8];
 const trackFx = Array.from({length: NUM_TRACKS}, () => ({ x: 0, y: 0 }));
 const trackFxMode = new Array(NUM_TRACKS).fill(0); // 0=CHOKE/SLAP, 1=CRUNCH/ENV
 const trackGainNodes = [];
+const trackEnvFilters = [];
 let bpm = 110, playing = false, currentStep = -1, nextStepTime = 0, scheduleInterval = null;
 const LOOKAHEAD = 0.1, SCHEDULE_MS = 25;
 function stepDuration() { return 60 / bpm / 4; }
@@ -673,6 +674,17 @@ function scheduler() {
           if (key === 'sleg')    playSynthLeg(freq, dur, val === 2, t, tr);
           if (key === 'sparkle') playSparkle(freq, dur, val === 2, t, tr);
           if (key === 'rhodes')  playRhodes(freq, dur, val === 2, t, tr);
+          // E: filter envelope — bright open, sweep closed over note duration
+          if (trackChop[tr] && trackEnvFilters[tr]) {
+            const ef = trackEnvFilters[tr];
+            const peakFreq = val === 2 ? 12000 : 7000;
+            const closeFreq = Math.max(freq * 1.2, 120);
+            const sweepDur = Math.min(dur * 0.85, stepDuration() * 2.5);
+            ef.frequency.cancelScheduledValues(t);
+            ef.frequency.setValueAtTime(peakFreq, t);
+            ef.frequency.exponentialRampToValueAtTime(closeFreq, t + sweepDur);
+            ef.frequency.setValueAtTime(22050, t + sweepDur + 0.01); // reopen instantly after
+          }
 
         } else if (key === 'ngate') {
           // Noise gate triggered by its own grid notes
@@ -2597,7 +2609,9 @@ async function initAudio() {
     window._duckGain = ctx.createGain(); window._duckGain.gain.value = 1;
     masterGain.connect(window._duckGain); window._duckGain.connect(masterLimiter); masterLimiter.connect(ctx.destination);
     for (let i=0; i<NUM_TRACKS; i++) {
-      const g = ctx.createGain(); g.gain.value = trackVolume[i]; g.connect(masterGain); trackGainNodes[i] = g;
+      const g = ctx.createGain(); g.gain.value = trackVolume[i]; trackGainNodes[i] = g;
+      const ef = ctx.createBiquadFilter(); ef.type = 'lowpass'; ef.frequency.value = 22050; ef.Q.value = 3;
+      g.connect(ef); ef.connect(masterGain); trackEnvFilters[i] = ef;
       trackFxNodes[i] = buildFxChain(g);
       if (trackInstruments[i] === 'ngate') initNoiseGate(i);
     }
