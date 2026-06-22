@@ -257,8 +257,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
   background: transparent;
   pointer-events: none;
   transition: background 0.05s, opacity 0.05s;
-  top: 10%; bottom: 10%; left: 0; right: 12%;
-  width: auto; height: auto;
+  top: 0; bottom: 0; left: 0; right: 0;
 }
 .step-cell.soft::after { background: var(--track-color, var(--text)); opacity: 0.4; }
 .step-cell.on::after   { background: var(--track-color, var(--text)); opacity: 1; }
@@ -486,33 +485,23 @@ function makeDistCurve(drive) {
 function buildFxChain(trackGain) {
   const dryGain = ctx.createGain(); dryGain.gain.value = 1; dryGain.connect(trackGain);
   const fxSend  = ctx.createGain(); fxSend.gain.value = 0;
-  const gateGain = ctx.createGain(); gateGain.gain.value = 1;
-  const preGain = ctx.createGain(); preGain.gain.value = 0.25;
-  const ws = ctx.createWaveShaper(); ws.oversample = '2x'; ws.curve = makeDistCurve(0);
-  const postGain = ctx.createGain(); postGain.gain.value = 0.4;
-  const lim = ctx.createDynamicsCompressor();
-  lim.threshold.value = -6; lim.knee.value = 3; lim.ratio.value = 20;
-  lim.attack.value = 0.0005; lim.release.value = 0.08;
-  // Both paths connect via gateGain → trackGain
-  // CHOKE/SLAP: fxSend → gateGain → trackGain
-  // CRUNCH/ENV: fxSend → preGain → ws → postGain → lim → trackGain
-  fxSend.connect(gateGain); gateGain.connect(trackGain);
-  fxSend.connect(preGain); preGain.connect(ws); ws.connect(postGain); postGain.connect(lim); lim.connect(trackGain);
-  // Start with both paths silent — setFxActive will route correctly
-  preGain.gain.value = 0; gateGain.gain.value = 0;
+  const gateGain = ctx.createGain(); gateGain.gain.value = 0;
+  const preGain = ctx.createGain(); preGain.gain.value = 0;
+  const ws = ctx.createWaveShaper(); ws.oversample = 'none'; ws.curve = makeDistCurve(0.5);
+  const postGain = ctx.createGain(); postGain.gain.value = 0.5;
+  // crunch path: fxSend → preGain → ws → postGain → trackGain (no compressor = no latency)
+  fxSend.connect(preGain); preGain.connect(ws); ws.connect(postGain); postGain.connect(trackGain);
   return { dryGain, fxSend, gateGain, preGain, postGain, ws };
 }
 
 function setFxActive(tr, fxVal) {
   if (!trackFxNodes[tr]) return;
   const on = fxVal && (fxVal.x > 0 || fxVal.y > 0);
-  const { dryGain, fxSend, gateGain, preGain, ws } = trackFxNodes[tr];
+  const { dryGain, fxSend, preGain } = trackFxNodes[tr];
   const now = ctx.currentTime;
   dryGain.gain.cancelScheduledValues(now); dryGain.gain.setValueAtTime(on ? 0 : 1, now);
   fxSend.gain.cancelScheduledValues(now);  fxSend.gain.setValueAtTime(on ? 1 : 0, now);
-  gateGain.gain.cancelScheduledValues(now); gateGain.gain.setValueAtTime(0, now);
   preGain.gain.cancelScheduledValues(now);  preGain.gain.setValueAtTime(on ? 0.25 : 0, now);
-  if (on) ws.curve = makeDistCurve(0.5);
   if (trackGainNodes[tr]) {
     const fxComp = on ? trackVolume[tr] * 0.5 : trackVolume[tr];
     trackGainNodes[tr].gain.cancelScheduledValues(now);
