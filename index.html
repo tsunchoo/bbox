@@ -2165,7 +2165,7 @@ function flashBtn(id) {
   document.getElementById('saveSeparateBtn').addEventListener('click', () => { hideOverlay(); saveAllSeparate(); });
   document.getElementById('saveCombinedBtn').addEventListener('click', () => { hideOverlay(); saveAllCombined(); });
 
-  let holdTimer = null, didHold = false;
+  let holdTimer = null, didHold = false, isTouch = false;
 
   function onPress() {
     didHold = false;
@@ -2178,18 +2178,15 @@ function flashBtn(id) {
 
   function onRelease() {
     if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
-    if (!didHold) {
-      // Tap — toggle recording
-      toggleRecord();
-    }
+    if (!didHold) toggleRecord();
     didHold = false;
   }
 
-  saveBtn.addEventListener('mousedown', onPress);
-  saveBtn.addEventListener('mouseup', onRelease);
+  saveBtn.addEventListener('touchstart', e => { e.preventDefault(); isTouch = true; onPress(); }, { passive: false });
+  saveBtn.addEventListener('touchend', e => { e.preventDefault(); onRelease(); isTouch = false; }, { passive: false });
+  saveBtn.addEventListener('mousedown', () => { if (isTouch) return; onPress(); });
+  saveBtn.addEventListener('mouseup', () => { if (isTouch) return; onRelease(); });
   saveBtn.addEventListener('mouseleave', () => { if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; } });
-  saveBtn.addEventListener('touchstart', e => { e.preventDefault(); onPress(); }, { passive: false });
-  saveBtn.addEventListener('touchend', e => { e.preventDefault(); onRelease(); }, { passive: false });
 })();
 
 // Collect filled slots (or current state if none saved)
@@ -2503,29 +2500,27 @@ function randAll(mode) {
 (function() {
   const btn = document.getElementById('randBtn');
   if (!btn) return;
-  let holdTimer = null, autoRandInterval = null;
+  let holdTimer = null, autoRandInterval = null, isTouch = false;
 
   function startHold() {
     holdTimer = setTimeout(() => {
       holdTimer = null;
-      // Start auto-retrigger
       btn.classList.add('pulsing');
       randAll();
-      const barMs = () => (60 / bpm) * 16 * 1000; // 4 measures in ms
-      autoRandInterval = setInterval(() => { randAll(); }, barMs());
+      autoRandInterval = setInterval(() => { randAll(); }, (60 / bpm) * 16 * 1000);
     }, 400);
   }
 
-  function endHold(didTap) {
-    if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; if (didTap) { flashBtn('randBtn'); randAll(); } }
+  function endHold() {
+    if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; flashBtn('randBtn'); randAll(); return; }
     if (autoRandInterval) { clearInterval(autoRandInterval); autoRandInterval = null; btn.classList.remove('pulsing'); }
   }
 
-  btn.addEventListener('mousedown', () => startHold());
-  btn.addEventListener('mouseup', () => endHold(!autoRandInterval));
-  btn.addEventListener('mouseleave', () => endHold(false));
-  btn.addEventListener('touchstart', e => { e.preventDefault(); startHold(); }, { passive: false });
-  btn.addEventListener('touchend', e => { e.preventDefault(); endHold(!autoRandInterval); }, { passive: false });
+  btn.addEventListener('touchstart', e => { e.preventDefault(); isTouch = true; startHold(); }, { passive: false });
+  btn.addEventListener('touchend', e => { e.preventDefault(); endHold(); }, { passive: false });
+  btn.addEventListener('mousedown', () => { if (isTouch) { isTouch = false; return; } startHold(); });
+  btn.addEventListener('mouseup', () => { if (isTouch) return; endHold(); });
+  btn.addEventListener('mouseleave', () => { if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; } });
 })();
 
 const NUM_SLOTS = 6, slots = new Array(NUM_SLOTS).fill(null);
