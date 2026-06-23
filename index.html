@@ -33,7 +33,7 @@ header {
   width: 100%; max-width: 960px; display: flex; align-items: center;
   justify-content: space-between;
   margin-top: 12px;
-  margin-bottom: 5px; border-bottom: 1px solid var(--border); padding-bottom: 5px;
+  margin-bottom: 5px; padding-bottom: 5px;
 }
 header h1 { font-family: 'DM Sans', sans-serif; font-size: 1.4rem; letter-spacing: 4px; }
 header .sub { font-size: 0.44rem; color: var(--dim); letter-spacing: 2px; text-transform: uppercase; }
@@ -50,26 +50,26 @@ header .sub { font-size: 0.44rem; color: var(--dim); letter-spacing: 2px; text-t
   flex: 1; padding: 0 4px; flex-shrink: 1;
 }
 .btn {
-  background: none; border: 3px solid var(--text); color: var(--text);
+  background: #b0b0b0; border: none; color: var(--text);
   font-family: 'DM Sans', sans-serif; font-size: 0.72rem; font-weight: 700;
   letter-spacing: 0.5px; padding: 0 10px; cursor: pointer; text-transform: uppercase;
-  transition: background 0.1s, color 0.1s, border-color 0.1s; height: 54px; flex-shrink: 0; white-space: nowrap;
+  transition: background 0.1s, color 0.1s; height: 54px; flex-shrink: 0; white-space: nowrap;
   touch-action: manipulation;
 }
-.btn.active { background: var(--text); color: var(--bg); }
-#playBtn.playing { background: var(--playhead); border-color: var(--playhead); color: #fff; }
+.btn.active { background: var(--text); color: var(--bg); border: none; }
+#playBtn.playing { background: var(--playhead); color: #fff; }
 .btn:active { opacity: 0.7; }
 
-#beatBtn.active { background: var(--playhead) !important; border-color: var(--playhead) !important; color: #fff !important; }
-#beatBtn.beat-pulse { animation: beat-red 0.5s infinite alternate; border-color: var(--text); }
-@keyframes beat-red { from { background: var(--playhead); color: #fff; } to { background: #7a1000; color: #fff; } }
-#saveBtn.rec-active { animation: rec-pulse 0.5s infinite alternate; font-size: 1.4rem; font-weight: 700; }
-@keyframes rec-pulse { from { background: var(--playhead); border-color: var(--text); color: #fff; } to { background: #7a1000; border-color: var(--text); color: #fff; } }
-.btn-flash { background: var(--slot-saved) !important; border-color: var(--slot-saved) !important; color: #000 !important; transition: none !important; }
+#beatBtn.active { background: var(--playhead) !important; border: none !important; color: #fff !important; }
+#beatBtn.beat-pulse { animation: beat-red 0.5s infinite alternate; }
+@keyframes beat-red { from { background: var(--playhead); color: #fff; } to { background: #7a1000; color: #fff; } } to { background: #7a1000; color: #fff; } }
+#saveBtn.rec-active { animation: rec-pulse 0.5s infinite alternate; font-size: 1.4rem; font-weight: 700; border: none; }
+@keyframes rec-pulse { from { background: var(--playhead); color: #fff; } to { background: #7a1000; color: #fff; } }
+.btn-flash { background: var(--slot-saved) !important; color: #000 !important; transition: none !important; border: none !important; }
 .rand-overlay-btn {
   font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 700;
   letter-spacing: 2px; text-transform: uppercase; cursor: pointer;
-  padding: 20px 0; background: none; border: 3px solid var(--text); color: var(--text);
+  padding: 20px 0; background: #b0b0b0; border: none; color: var(--text);
   touch-action: manipulation;
 }
 .rand-overlay-btn:active { background: var(--text); color: var(--bg); }
@@ -77,7 +77,7 @@ header .sub { font-size: 0.44rem; color: var(--dim); letter-spacing: 2px; text-t
 #bpmSlider::-moz-range-thumb { width: 32px; height: 32px; background: var(--text); border-radius: 0; border: none; }
 .bpm-wrap { display: flex; align-items: center; gap: 6px; flex: 1; }
 .bpm-val { font-size: 0.9rem; font-weight: 700; min-width: 32px; text-align: right; flex-shrink: 0; }
-input[type=range] { -webkit-appearance: none; flex: 1; height: 3px; background: var(--text); outline: none; }
+input[type=range] { -webkit-appearance: none; flex: 1; height: 3px; background: var(--text); outline: none; border: none; }
 input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 32px; height: 32px; background: var(--text); cursor: pointer; border-radius: 0; }
 input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var(--text); cursor: pointer; border-radius: 0; border: none; }
 .vol-wrap { display: flex; align-items: center; gap: 8px; width: 100%; max-width: 960px; margin-top: 6px; padding: 6px 0; }
@@ -93,33 +93,33 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 }
 .track-name-btn {
   font-size: 0.72rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
-  cursor: pointer; background: var(--bg); color: var(--text);
-  border: 3px solid var(--text); padding: 0 8px; white-space: nowrap; overflow: hidden;
+  cursor: pointer; background: #b0b0b0; color: var(--text);
+  border: none; padding: 0 8px; white-space: nowrap; overflow: hidden;
   font-family: 'DM Sans', sans-serif; flex-shrink: 0; width: 96px;
   display: flex; align-items: center;
   touch-action: manipulation; -webkit-tap-highlight-color: transparent;
   transition: background 0.06s, color 0.06s;
 }
-.track-name-btn.has-notes { background: var(--text); color: var(--bg); border-color: var(--text); }
-.track-name-btn.muted { background: var(--dim); color: var(--bg); opacity: 0.55; border-color: var(--dim); }
+.track-name-btn.has-notes { background: var(--text); color: var(--bg); }
+.track-name-btn.muted { background: var(--dim); color: var(--bg); opacity: 0.55; }
 .track-name-btn.playing { background: var(--playhead) !important; color: #fff !important; opacity: 1; transition: background 0.3s; }
 .track-name-btn.shifting { background: var(--playhead) !important; color: #fff !important; animation: pulse 0.5s infinite alternate; }
 .track-ctrl-icon-btn {
   width: 32px; flex-shrink: 0;
-  background: none; border: 3px solid var(--text); color: var(--text);
+  background: #b0b0b0; border: none; color: var(--text);
   font-family: 'DM Sans', sans-serif; font-size: 0.72rem; font-weight: 700;
   letter-spacing: 0.5px; text-transform: uppercase; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   touch-action: manipulation; transition: background 0.1s, color 0.1s;
 }
-.track-ctrl-icon-btn.on { background: var(--playhead); color: #fff; border-color: var(--playhead); }
-.track-ctrl-icon-btn.sweep-on { background: #5bbcb8; border-color: #5bbcb8; color: #fff; }
-.rand-btn.pulsing { border-color: var(--playhead); color: #fff; animation: pulse 0.5s infinite alternate; }
+.track-ctrl-icon-btn.on { background: var(--playhead); color: #fff; }
+.track-ctrl-icon-btn.sweep-on { background: #5bbcb8; color: #fff; }
+.rand-btn.pulsing { color: #fff; animation: pulse 0.5s infinite alternate; }
 @keyframes pulse { from { background: var(--playhead); color: #fff; } to { background: #ff7755; color: #fff; } }
 .track-ctrl-icon-btn.playing { opacity: 0.45; }
 .shift-btn {
   width: 32px; flex-shrink: 0; background: none;
-  border: 3px solid var(--text);
+  border: none;
   color: var(--text); font-family: 'DM Sans', sans-serif;
   cursor: pointer; display: flex; align-items: center; justify-content: center;
   font-size: 1.2rem; font-weight: 700; transition: opacity 0.1s; padding: 0;
@@ -128,7 +128,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 .shift-btn:active { opacity: 0.4; }
 .track-vol-bar {
   flex: 1; position: relative; overflow: hidden;
-  background: var(--bg); border: 3px solid var(--text);
+  background: var(--bg); border: none;
   cursor: ew-resize; touch-action: none;
   -webkit-tap-highlight-color: transparent;
 }
@@ -140,7 +140,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 .track-vol-bar.muted .track-vol-fill { background: transparent; }
 .row-muted .track-ctrl-icon-btn,
 .row-muted .shift-btn {
-  background: #ccc !important; border-color: #aaa !important; color: #888 !important;
+  background: #ccc !important; color: #888 !important; border: none !important;
   animation: none !important;
 }
 
@@ -154,12 +154,12 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 }
 #soundPicker.visible { display: flex; }
 .sound-picker-inner {
-  background: var(--bg); border: 3px solid var(--text);
+  background: var(--bg); border: none;
   min-width: 320px; padding: 16px;
 }
 .sound-picker-title {
   padding: 0 0 12px 0; font-size: 0.7rem; letter-spacing: 2px; text-transform: uppercase;
-  color: var(--dim); border-bottom: 2px solid var(--text); margin-bottom: 12px;
+  color: var(--dim); border-bottom: none; margin-bottom: 12px;
 }
 #soundPickerList {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
@@ -167,24 +167,24 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 .sound-option {
   padding: 16px 8px; font-size: 0.8rem; letter-spacing: 1px; text-transform: uppercase;
   cursor: pointer; color: var(--text); text-align: center;
-  border: 2px solid var(--text); font-family: 'DM Sans', sans-serif;
+  border: none; background: #b0b0b0; font-family: 'DM Sans', sans-serif;
   transition: background 0.05s, color 0.05s; touch-action: manipulation;
   user-select: none;
 }
 .sound-option:hover { background: var(--text); color: var(--bg); }
-.sound-option.active { background: var(--bg); color: var(--text); border-color: var(--text); border-width: 3px; }
+.sound-option.active { background: var(--text); color: var(--bg); border: none; }
 /* Instrument group colours */
-.inst-kit   { background: #1a3a6b; color: #fff; border-color: #1a3a6b; }
-.inst-perc  { background: #2a7a3a; color: #fff; border-color: #2a7a3a; }
-.inst-tonal { background: #ff6600; color: #fff; border-color: #cc5200; }
+.inst-kit   { background: #1a3a6b; color: #fff; }
+.inst-perc  { background: #2a7a3a; color: #fff; }
+.inst-tonal { background: #ff6600; color: #fff; }
 .inst-kit:hover   { background: #0d1f40; color: #fff; }
 .inst-perc:hover  { background: #1a5228; color: #fff; }
 .inst-tonal:hover { background: #cc5200; color: #fff; }
-.inst-kit.active, .inst-perc.active, .inst-tonal.active { background: var(--bg); color: var(--text); border-color: var(--text); border-width: 3px; }
+.inst-kit.active, .inst-perc.active, .inst-tonal.active { background: var(--text); color: var(--bg); border: none; }
 /* Track name buttons inherit group color */
-.track-name-btn.inst-kit   { background: #1a3a6b; color: #fff; border-color: #1a3a6b; }
-.track-name-btn.inst-perc  { background: #2a7a3a; color: #fff; border-color: #2a7a3a; }
-.track-name-btn.inst-tonal { background: #ff6600; color: #fff; border-color: #cc5200; }
+.track-name-btn.inst-kit   { background: #1a3a6b; color: #fff; }
+.track-name-btn.inst-perc  { background: #2a7a3a; color: #fff; }
+.track-name-btn.inst-tonal { background: #ff6600; color: #fff; }
 .track-name-btn.has-notes.inst-kit   { background: #1a3a6b; }
 .track-name-btn.has-notes.inst-perc  { background: #2a7a3a; }
 .track-name-btn.has-notes.inst-tonal { background: #ff6600; }
@@ -200,14 +200,14 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 #volOverlay.visible { display: flex; }
 .vol-overlay-inner {
   display: flex; flex-direction: column; align-items: center; gap: 16px;
-  padding: 24px 36px; border: 3px solid var(--text); background: var(--bg);
+  padding: 24px 36px; border: none; background: var(--bg);
   pointer-events: none;
 }
 .vol-overlay-label { font-size: 1.1rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
 .vol-overlay-pct { font-size: 2.5rem; font-weight: 700; line-height: 1; min-width: 3ch; text-align: center; }
 .vol-bar-track {
   width: 100px; height: 20px; background: var(--border); position: relative;
-  border: 2px solid var(--text);
+  border: none;
 }
 .vol-bar-fill {
   position: absolute; bottom: 0; left: 0; right: 0;
@@ -223,8 +223,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 .step-lane {
   flex: 1; display: flex; flex-direction: column;
-  border: 3px solid var(--text);
-  border-top: none;
+  border: none;
   overflow: visible;
 }
 .step-lane-cells {
@@ -240,14 +239,14 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 }
 /* teeth — positioned so bottom edge sits exactly on the lane border */
 .step-cell::before {
-  content: ''; position: absolute; bottom: -3px; left: -1px;
-  width: 3px; background: var(--text); height: calc(30% + 3px); pointer-events: none;
+  content: ''; position: absolute; bottom: 0; left: -1px;
+  width: 2px; background: var(--text); height: 30%; pointer-events: none;
   z-index: 1;
 }
 /* beat markers taller */
 .step-cell[data-step="4"]::before,
 .step-cell[data-step="8"]::before,
-.step-cell[data-step="12"]::before { height: calc(55% + 3px); }
+.step-cell[data-step="12"]::before { height: 55%; }
 /* step 0 uses the lane's left border */
 .step-cell[data-step="0"]::before { display: none; }
 
@@ -287,15 +286,15 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
   grid-template-columns: repeat(6, 1fr); gap: 4px; margin-top: 2px;
 }
 .slot-btn {
-  background: var(--bg); border: 3px solid var(--text); color: var(--text);
+  background: #b0b0b0; border: none; color: var(--text);
   font-family: 'DM Sans', sans-serif; font-size: 1.6rem; font-weight: 700; letter-spacing: 0;
   padding: 16px 0; cursor: pointer; text-align: center;
-  touch-action: manipulation; transition: background 0.1s, border-color 0.1s, color 0.1s;
+  touch-action: manipulation; transition: background 0.1s, color 0.1s;
 }
-.slot-btn.saved  { background: var(--slot-saved);  border-color: var(--slot-saved); color: #fff; }
-.slot-btn.pending { animation: slot-pending 0.4s infinite alternate; border-color: var(--text); color: #fff; }
+.slot-btn.saved  { background: var(--slot-saved); color: #fff; }
+.slot-btn.pending { animation: slot-pending 0.4s infinite alternate; color: #fff; }
 @keyframes slot-pending { from { background: var(--slot-saved); } to { background: var(--bg); } }
-.slot-btn.loaded { background: var(--slot-loaded); border-color: var(--slot-loaded); color: #fff; }
+.slot-btn.loaded { background: var(--slot-loaded); color: #fff; }
 .slot-btn.loaded.beat-pulse { animation: slot-pulse 0.12s ease-out; }
 @keyframes slot-pulse { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
 #playBtn.btn-beat-pulse, #beatBtn.btn-beat-pulse { animation: slot-pulse 0.12s ease-out; }
@@ -362,7 +361,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <!-- Save overlay -->
 <div id="saveOverlay" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(245,240,232,0.95);align-items:center;justify-content:center;touch-action:none;">
-  <div style="display:flex;flex-direction:column;gap:12px;padding:24px;border:3px solid var(--text);background:var(--bg);width:min(320px,88vw);">
+  <div style="display:flex;flex-direction:column;gap:12px;padding:24px;background:var(--bg);width:min(320px,88vw);">
     <div style="font-size:0.65rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--dim);font-family:'DM Sans',sans-serif;">EXPORT</div>
     <button class="rand-overlay-btn" id="saveSeparateBtn">SEPARATE FILES</button>
     <button class="rand-overlay-btn" id="saveCombinedBtn">ONE FILE</button>
@@ -372,7 +371,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <!-- BPM overlay -->
 <div id="bpmOverlay" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.4);align-items:center;justify-content:center;">
-  <div id="bpmOverlayInner" style="background:var(--bg);border:3px solid var(--text);padding:32px 40px;display:flex;flex-direction:column;align-items:center;gap:20px;">
+  <div id="bpmOverlayInner" style="background:var(--bg);padding:32px 40px;display:flex;flex-direction:column;align-items:center;gap:20px;">
     <div style="display:flex;align-items:center;justify-content:center;height:65vh;width:64px;position:relative;">
       <input type="range" id="bpmSlider" min="40" max="200" value="110"
         style="position:absolute;width:65vh;height:3px;background:var(--text);outline:none;transform:rotate(-90deg);left:calc(50% - 32.5vh);top:calc(50% - 1.5px);-webkit-appearance:none;appearance:none;"
@@ -747,11 +746,7 @@ function togglePlay() {
     btn.classList.add('playing'); btn.textContent = 'STOP';
     updateBeatPulse();
     document.querySelectorAll('.reel-wrap').forEach(r => r.classList.add('spinning'));
-    if (beatPlaying) {
-      clearInterval(beatInterval);
-      beatStep = -1; beatNextTime = nextStepTime;
-      beatInterval = setInterval(scheduleBeat, SCHEDULE_MS);
-    }
+
     // Auto-start recording if armed
     if (_recArmed && _mediaRecorder && _mediaRecorder.state === 'inactive') {
       _mediaRecorder.start();
@@ -762,7 +757,7 @@ function togglePlay() {
     btn.classList.remove('playing'); btn.textContent = 'PLAY';
     updateBeatPulse();
     document.querySelectorAll('.reel-wrap').forEach(r => r.classList.remove('spinning'));
-    if (beatPlaying) { clearInterval(beatInterval); beatInterval = null; }
+
     document.querySelectorAll('.step-cell').forEach(el => el.classList.remove('playing'));
     // Auto-stop recording after half-bar delay (to capture reverb tail)
     if (_recArmed && _mediaRecorder && _mediaRecorder.state === 'recording') {
@@ -777,23 +772,24 @@ function togglePlay() {
 }
 
 // ── Beat button: Kick on 1&3, Snare on 2&4 ──
-let beatPlaying = false, beatInterval = null, beatStep = -1, beatNextTime = 0;
+let beatPlaying = false, beatStep = -1, beatNextTime = 0;
 function scheduleBeat() {
   while (beatNextTime < ctx.currentTime + LOOKAHEAD) {
     beatStep = (beatStep + 1) % 4;
     const t = beatNextTime;
-    if (beatStep === 0 || beatStep === 2) {
-      playKick(t);
-      // Duck the mix by -6dB on kick beats
-      if (window._duckGain) {
-        const dg = window._duckGain.gain;
-        dg.cancelScheduledValues(t);
-        dg.setValueAtTime(1, t);
-        dg.linearRampToValueAtTime(0.5, t + 0.005);   // snap down -6dB in 5ms
-        dg.setTargetAtTime(1, t + 0.020, 0.08);        // release back over ~200ms
+    if (beatPlaying) {
+      if (beatStep === 0 || beatStep === 2) {
+        playKick(t);
+        if (window._duckGain) {
+          const dg = window._duckGain.gain;
+          dg.cancelScheduledValues(t);
+          dg.setValueAtTime(1, t);
+          dg.linearRampToValueAtTime(0.5, t + 0.005);
+          dg.setTargetAtTime(1, t + 0.020, 0.08);
+        }
+      } else {
+        playSnare(t);
       }
-    } else {
-      playSnare(t);
     }
     beatNextTime += 60 / bpm;
   }
@@ -1325,22 +1321,9 @@ function toggleBeat() {
   if (ctx) ctx.resume();
   beatPlaying = !beatPlaying;
   const btn = document.getElementById('beatBtn');
-  if (beatPlaying) {
-    if (beatStep === undefined || beatStep < 0) beatStep = -1; // only reset if not pre-set
-    if (playing && nextStepTime > ctx.currentTime) {
-      beatNextTime = nextStepTime;
-    } else {
-      beatNextTime = ctx.currentTime + 0.05;
-    }
-    beatInterval = setInterval(scheduleBeat, SCHEDULE_MS);
-    btn.classList.add('active');
-    updateBeatPulse();
-    if (!playing) togglePlay();
-  } else {
-    clearInterval(beatInterval); beatInterval = null;
-    btn.classList.remove('active');
-    updateBeatPulse();
-  }
+  btn.classList.toggle('active', beatPlaying);
+  updateBeatPulse();
+  if (beatPlaying && !playing) togglePlay();
 }
 
 // ── Sound picker (flat list, per track) ──
@@ -2155,7 +2138,7 @@ function audioBufferToWav(buffer, tempoHint) {
 function fullClear() {
   flashBtn('clearBtn');
   if (playing) togglePlay();
-  if (beatPlaying) toggleBeat();
+  if (beatPlaying) { beatPlaying = false; document.getElementById('beatBtn').classList.remove('active'); updateBeatPulse(); }
   // Stop any active auto-shifts
   Object.values(autoShiftStops).forEach(stop => stop());
   Object.keys(_noiseGateNodes).forEach(tr => {
@@ -2611,6 +2594,10 @@ async function initAudio() {
     const unlock = ctx.createBuffer(1,1,ctx.sampleRate);
     unlock.getChannelData(0)[0]=0.001;
     const src=ctx.createBufferSource(); src.buffer=unlock; src.connect(ctx.destination); src.start(0);
+    // Beat scheduler runs forever — beatPlaying gates whether notes fire
+    beatNextTime = ctx.currentTime + 0.1;
+    beatStep = -1;
+    setInterval(scheduleBeat, SCHEDULE_MS);
     msg.textContent = 'LOADING SAMPLES...';
     await loadSamples();
   } catch(e) {
