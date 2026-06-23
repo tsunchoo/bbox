@@ -39,9 +39,10 @@ header h1 { font-family: 'DM Sans', sans-serif; font-size: 1.4rem; letter-spacin
 header .sub { font-size: 0.44rem; color: var(--dim); letter-spacing: 2px; text-transform: uppercase; }
 .tape-reels { display: flex; gap: 78px; align-items: center; margin-right: 38px; margin-left: 30px; }
 .reel-wrap { position: relative; width: 42px; height: 42px; flex-shrink: 0; }
-.reel { width: 42px; height: 42px; display: block; transition: filter 0.2s; }
+.reel { width: 42px; height: 42px; display: block; transition: filter 0.3s; filter: brightness(0) invert(0.65); }
+.reel-wrap.spinning .reel { filter: brightness(0); }
 .reel-wrap { position: relative; display: inline-block; }
-.reel-wrap.recording .reel { filter: brightness(0) saturate(100%) invert(16%) sepia(90%) saturate(7000%) hue-rotate(355deg) brightness(100%); }
+.reel-wrap.recording .reel { filter: brightness(0) saturate(100%) invert(16%) sepia(90%) saturate(7000%) hue-rotate(355deg) brightness(100%) !important; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .reel-wrap.spinning { animation: spin 2s linear infinite; transform-origin: center; }
 .transport {
@@ -59,13 +60,17 @@ header .sub { font-size: 0.44rem; color: var(--dim); letter-spacing: 2px; text-t
   touch-action: manipulation;
 }
 .btn.active { background: var(--text); color: var(--bg); }
-#playBtn.playing { background: var(--playhead); color: #fff; }
+#playBtn.playing { background: #111; color: #fff; }
+#playBtn.playing.btn-beat-pulse { animation: play-pulse 0.12s ease-out; }
+@keyframes play-pulse { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
 .btn:active { opacity: 0.7; }
 
-#beatBtn.active { background: var(--playhead) !important; color: #fff !important; }
+#beatBtn.active { background: #111 !important; color: #fff !important; }
 #beatBtn.beat-pulse { animation: beat-red 0.5s infinite alternate; }
-@keyframes beat-red { from { background: var(--playhead); color: #fff; } to { background: #7a1000; color: #fff; } }
+@keyframes beat-red { from { background: #111; color: #fff; } to { background: #444; color: #fff; } }
 #saveBtn.rec-active { animation: rec-pulse 0.5s infinite alternate; }
+#saveBtn.rec-beat-pulse { animation: rec-pump 0.12s ease-out; }
+@keyframes rec-pump { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
 #saveBtn, #randBtn { touch-action: none; }
 @keyframes rec-pulse { from { background: var(--playhead); color: #fff; } to { background: #7a1000; color: #fff; } }
 .btn-flash { background: var(--slot-saved) !important; color: #000 !important; border: none !important; transition: none !important; }
@@ -771,6 +776,10 @@ function updatePlayhead(step) {
       const bb = document.getElementById('beatBtn');
       if (bb) { bb.classList.remove('btn-beat-pulse'); void bb.offsetWidth; bb.classList.add('btn-beat-pulse'); }
     }
+    if (_recArmed) {
+      const rb = document.getElementById('saveBtn');
+      if (rb) { rb.classList.remove('rec-beat-pulse'); void rb.offsetWidth; rb.classList.add('rec-beat-pulse'); }
+    }
   }
 }
 
@@ -977,15 +986,15 @@ function randomizeBassTrack(tr, level) {
 
   // Per-instrument note density rules
   const noteTables = {
-    sstring: [[1,2,0.10],[2,4,0.20],[3,6,0.30]],   // Strings — fewest
-    sleg:    [[1,2,0.10],[2,4,0.20],[3,6,0.30]],   // Strings+ — fewest
-    rhodes:  [[2,4,0.15],[4,7,0.30],[6,10,0.45]],  // Piano — medium
-    rhodes2: [[2,4,0.15],[4,7,0.30],[6,10,0.45]],  // Rhodes — medium
+    sstring: [[1,2,0.10],[2,3,0.20],[2,5,0.30]],   // Strings — fewest
+    sleg:    [[1,2,0.10],[2,3,0.20],[2,5,0.30]],   // Strings+ — fewest
+    rhodes:  [[2,3,0.15],[3,6,0.30],[5,8,0.45]],   // Piano — medium
+    rhodes2: [[2,3,0.15],[3,6,0.30],[5,8,0.45]],   // Rhodes — medium
   };
   const levelTable = noteTables[key] || [
-    [3, 6,  0.20],
-    [6, 10, 0.40],
-    [10, 16, 0.60],
+    [2, 5,  0.20],
+    [5, 8,  0.40],
+    [8, 13, 0.60],
   ];
   const [minN, maxN, accentRatio] = levelTable[level];
   const noteCount = minN + Math.floor(Math.random() * (maxN - minN + 1));
