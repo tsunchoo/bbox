@@ -3065,7 +3065,7 @@ if ('serviceWorker' in navigator) {
 
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + 0.05);
+    gain.gain.linearRampToValueAtTime(0.34, ctx.currentTime + 0.05);
 
     noise.connect(bp); bp.connect(gain); gain.connect(masterGain);
     noise.start(ctx.currentTime);
@@ -3077,14 +3077,14 @@ if ('serviceWorker' in navigator) {
     if (!sweepNodes || !ctx) return;
     const { bp, gain, noise } = sweepNodes;
     const t = ctx.currentTime;
-    const halfBeat = stepDuration() * 2;
-    // Fall back down over half a beat
+    const quarterNote = stepDuration() * 4;
+    // Fall back down over a quarter note
     bp.frequency.cancelScheduledValues(t);
-    bp.frequency.exponentialRampToValueAtTime(200, t + halfBeat);
+    bp.frequency.exponentialRampToValueAtTime(200, t + quarterNote);
     gain.gain.cancelScheduledValues(t);
     gain.gain.setValueAtTime(gain.gain.value, t);
-    gain.gain.linearRampToValueAtTime(0, t + halfBeat);
-    setTimeout(() => { try { noise.stop(); } catch(e) {} sweepNodes = null; }, halfBeat * 1000 + 100);
+    gain.gain.linearRampToValueAtTime(0, t + quarterNote);
+    setTimeout(() => { try { noise.stop(); } catch(e) {} sweepNodes = null; }, quarterNote * 1000 + 100);
     btn.classList.remove('active');
   }
 
@@ -3108,6 +3108,23 @@ if ('serviceWorker' in navigator) {
   btn.addEventListener('touchstart', e => { e.preventDefault(); onDown(); }, { passive: false });
   btn.addEventListener('touchend', e => { e.preventDefault(); onUp(); }, { passive: false });
   btn.addEventListener('touchcancel', onUp);
+
+  // Drag from SWEEP onto BEAT or RAND to trigger them simultaneously
+  btn.addEventListener('touchmove', e => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (!el) return;
+    const target = el.closest('#beatBtn, #randBtn');
+    if (target && !target.dataset.sweepTriggered) {
+      target.dataset.sweepTriggered = '1';
+      if (target.id === 'beatBtn') toggleBeat();
+      if (target.id === 'randBtn') { flashBtn('randBtn'); randAll(); }
+    }
+  }, { passive: false });
+  btn.addEventListener('touchend', e => {
+    document.querySelectorAll('[data-sweep-triggered]').forEach(el => delete el.dataset.sweepTriggered);
+  }, { passive: false });
 })();
 
 </script>
