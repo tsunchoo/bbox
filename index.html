@@ -50,13 +50,13 @@ header .sub { font-size: 0.44rem; color: var(--dim); letter-spacing: 2px; text-t
   flex: 1; padding: 0 4px; flex-shrink: 1;
 }
 .btn {
-  background: #b0b0b0; border: none; color: var(--text);
+  background: #555; border: none; color: #fff;
   font-family: 'DM Sans', sans-serif; font-size: 0.72rem; font-weight: 700;
   letter-spacing: 0.5px; padding: 0 10px; cursor: pointer; text-transform: uppercase;
   transition: background 0.1s, color 0.1s; height: 54px; flex-shrink: 0; white-space: nowrap;
   touch-action: manipulation;
 }
-.btn.active { background: var(--text); color: var(--bg); border: none; }
+.btn.active { background: #111; color: #fff; border: none; }
 #playBtn.playing { background: var(--playhead); color: #fff; }
 .btn:active { opacity: 0.7; }
 
@@ -118,7 +118,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 @keyframes pulse { from { background: var(--playhead); color: #fff; } to { background: #ff7755; color: #fff; } }
 .track-ctrl-icon-btn.playing { opacity: 0.45; }
 .shift-btn {
-  width: 32px; flex-shrink: 0; background: none;
+  width: 32px; flex-shrink: 0; background: #b0b0b0;
   border: none;
   color: var(--text); font-family: 'DM Sans', sans-serif;
   cursor: pointer; display: flex; align-items: center; justify-content: center;
@@ -215,7 +215,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 }
 
 /* ── Sequencer grid (middle) ── */
-.seq-wrap { width: 100%; max-width: 960px; margin-top: 0; margin-bottom: 0; display: flex; flex-direction: column; gap: 20px; }
+.seq-wrap { width: 100%; max-width: 960px; margin-top: 0; margin-bottom: 0; display: flex; flex-direction: column; gap: 0; }
 .track-wrap { display: flex; flex-direction: column; gap: 3px; }
 .track-row {
   display: flex; align-items: stretch;
@@ -224,6 +224,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 .step-lane {
   flex: 1; display: flex; flex-direction: column;
   border: none;
+  border-bottom: 1px solid var(--border);
   overflow: visible;
 }
 .step-lane-cells {
@@ -234,7 +235,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
   aspect-ratio: 1;
   position: relative; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  min-height: 0; box-sizing: border-box;
+  min-height: 20px; box-sizing: border-box;
   overflow: visible;
 }
 /* teeth — positioned so bottom edge sits exactly on the lane border */
@@ -1323,7 +1324,6 @@ function toggleBeat() {
   const btn = document.getElementById('beatBtn');
   btn.classList.toggle('active', beatPlaying);
   updateBeatPulse();
-  if (beatPlaying && !playing) togglePlay();
 }
 
 // ── Sound picker (flat list, per track) ──
