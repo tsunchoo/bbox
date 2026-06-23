@@ -68,11 +68,11 @@ header .sub { font-size: 0.44rem; color: var(--dim); letter-spacing: 2px; text-t
 #beatBtn.active { background: #111 !important; color: #fff !important; }
 #beatBtn.beat-pulse { animation: beat-red 0.5s infinite alternate; }
 @keyframes beat-red { from { background: #111; color: #fff; } to { background: #444; color: #fff; } }
-#saveBtn.rec-active { animation: rec-pulse 0.5s infinite alternate; }
+#saveBtn.rec-active { animation: rec-pulse 0.5s infinite alternate; background: var(--playhead) !important; color: #fff !important; }
 #saveBtn.rec-beat-pulse { animation: rec-pump 0.12s ease-out; }
 @keyframes rec-pump { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
 #saveBtn, #randBtn { touch-action: none; }
-@keyframes rec-pulse { from { background: var(--playhead); color: #fff; } to { background: #7a1000; color: #fff; } }
+@keyframes rec-pulse { from { background: var(--playhead) !important; color: #fff; } to { background: #7a1000 !important; color: #fff; } }
 .btn-flash { background: var(--slot-saved) !important; color: #000 !important; border: none !important; transition: none !important; }
 .rand-overlay-btn {
   font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 700;
