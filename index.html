@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>BOOMBLAP v8</title>
+<title>BOOMBLAP v9-test</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
 :root {
@@ -2887,6 +2887,16 @@ async function initAudio() {
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(e => console.warn('SW:', e));
 }
+
+// TEST: force visual states on load
+window.addEventListener('load', () => {
+  const sb = document.getElementById('saveBtn');
+  if (sb) sb.classList.add('rec-active');
+  setTimeout(() => {
+    const rb = document.getElementById('randBtn');
+    if (rb) rb.classList.add('pulsing');
+  }, 2000);
+});
 </script>
 </body>
 </html>
