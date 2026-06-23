@@ -2726,7 +2726,7 @@ async function initAudio() {
   overlay.style.pointerEvents = 'none';
   try {
     msg.textContent = 'STARTING...';
-    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
     msg.textContent = 'CTX OK, RESUMING...';
     await ctx.resume();
     msg.textContent = 'RESUMED, BUILDING GRAPH...';
