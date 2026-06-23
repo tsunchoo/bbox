@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>BOOMBLAP v15</title>
+<title>BOOMBOX v15</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
 :root {
@@ -321,7 +321,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 <body>
 
 <button id="loadingOverlay" onclick="document.getElementById('loadingMsg').textContent='TAPPED - LOADING...'; initAudio()">
-  <h2>BOOMBLAP</h2>
+  <h2>BOOMBOX</h2>
   <p id="loadingMsg">Tap to load</p>
 </button>
 
@@ -343,7 +343,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 </div>
 
 <header>
-  <h1>BOOMBLAP</h1>
+  <h1>BOOMBOX</h1>
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
       <img class="reel" id="reel1" src="tape_spool.png" alt="">
@@ -2218,7 +2218,7 @@ function getExportSnaps() {
 }
 
 async function shareOrDownload(files) {
-  const shareData = { files, title: 'BOOMBLAP loops' };
+  const shareData = { files, title: 'BOOMBOX loops' };
   try {
     await navigator.share(shareData);
   } catch(e) {
@@ -2322,7 +2322,7 @@ function toggleRecord() {
       if (_recChunks.length === 0) return;
       const blob = new Blob(_recChunks, { type: _mediaRecorder.mimeType || 'audio/webm' });
       const ext = blob.type.includes('ogg') ? 'ogg' : blob.type.includes('mp4') ? 'mp4' : 'webm';
-      const file = new File([blob], `boomblap-${Math.round(bpm)}bpm.${ext}`, { type: blob.type });
+      const file = new File([blob], `boombox-${Math.round(bpm)}bpm.${ext}`, { type: blob.type });
       await shareOrDownload([file]);
     };
     _recArmed = true;
@@ -2372,7 +2372,7 @@ function audioBufferToWav(buffer, tempoHint) {
 
   // bext chunk (602 bytes content)
   wStr('bext'); wU32(bextContent);
-  wStr('BOOMBLAP', 256);  // Description (256)
+  wStr('BOOMBOX', 256);  // Description (256)
   wZero(32);                 // Originator (32)
   wZero(32);                 // OriginatorReference (32)
   wZero(10);                 // OriginationDate (10)
