@@ -40,7 +40,8 @@ header .sub { font-size: 0.44rem; color: var(--dim); letter-spacing: 2px; text-t
 .tape-reels { display: flex; gap: 78px; align-items: center; margin-right: 38px; margin-left: 30px; }
 .reel-wrap { position: relative; width: 42px; height: 42px; flex-shrink: 0; }
 .reel { width: 42px; height: 42px; display: block; transition: filter 0.2s; }
-.reel.recording { filter: sepia(1) saturate(5) hue-rotate(-10deg) brightness(0.9); }
+.reel-wrap { position: relative; display: inline-block; }
+.reel-wrap.recording::after { content: ""; position: absolute; inset: 0; background: #ff2200; mix-blend-mode: multiply; border-radius: 50%; opacity: 0.85; pointer-events: none; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .reel-wrap.spinning { animation: spin 2s linear infinite; transform-origin: center; }
 .transport {
@@ -711,6 +712,11 @@ function scheduler() {
         }
       }
     }
+    // Metronome: fire on every beat when all tracks silent and beat not engaged
+    if (step % 4 === 0 && !beatPlaying) {
+      const allEmpty = grid.every(row => row.every(v => v === 0));
+      if (allEmpty) playMetronome(t, step === 0);
+    }
     // Beat: fire from main clock on downbeats only
     if (step % 8 === 0 || step % 8 === 4) {
       // Activate pending beat on next downbeat
@@ -1341,6 +1347,35 @@ function playRhodes2(freq, durSec, isAccent, time, tr) {
   const clickEnv = ctx.createGain(); clickEnv.gain.value = vel * 0.2;
   click.connect(clickLP); clickLP.connect(clickEnv); clickEnv.connect(dest);
   click.start(time);
+}
+
+// ── Metronome: warm woodblock click ──
+function playMetronome(t, isAccent) {
+  if (!ctx) return;
+  const vol = isAccent ? 0.28 : 0.16;
+  const freq = isAccent ? 1200 : 900;
+
+  // Sine transient — the "tok"
+  const osc = ctx.createOscillator(); osc.type = 'sine';
+  osc.frequency.setValueAtTime(freq, t);
+  osc.frequency.exponentialRampToValueAtTime(freq * 0.4, t + 0.025);
+  const oscEnv = ctx.createGain();
+  oscEnv.gain.setValueAtTime(vol, t);
+  oscEnv.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+  osc.connect(oscEnv); oscEnv.connect(masterGain);
+  osc.start(t); osc.stop(t + 0.05);
+
+  // Noise body — the "wood"
+  const bufLen = Math.ceil(ctx.sampleRate * 0.03);
+  const nBuf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+  const nd = nBuf.getChannelData(0);
+  for (let i = 0; i < bufLen; i++) nd[i] = (Math.random()*2-1) * Math.pow(1-i/bufLen, 2);
+  const noise = ctx.createBufferSource(); noise.buffer = nBuf;
+  const bp = ctx.createBiquadFilter(); bp.type = 'bandpass';
+  bp.frequency.value = freq * 1.5; bp.Q.value = 3;
+  const noiseEnv = ctx.createGain(); noiseEnv.gain.value = vol * 0.5;
+  noise.connect(bp); bp.connect(noiseEnv); noiseEnv.connect(masterGain);
+  noise.start(t);
 }
 
 function playKick(t) {
@@ -2256,7 +2291,7 @@ function updateRecBtn() {
   } else {
     btn.classList.remove('rec-active');
   }
-  document.querySelectorAll('.reel').forEach(r => r.classList.toggle('recording', isRec));
+  document.querySelectorAll('.reel-wrap').forEach(r => r.classList.toggle('recording', isRec));
 }
 
 function onRecClick() { toggleRecord(); }
