@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>BOOMBLAP v10</title>
+<title>BOOMBLAP v11</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
 :root {
@@ -358,7 +358,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
   <button class="btn" id="clearBtn" onclick="fullClear()">CLEAR</button>
   <button class="btn" id="randBtn">RAND</button>
   <button class="btn" id="bpmBtn" onclick="toggleBpmOverlay()"><span id="bpmVal">110</span> BPM</button>
-  <button class="btn" id="saveBtn">REC</button>
+  <button class="btn" id="saveBtn" onclick="onRecClick()">REC</button>
 </div>
 
 
@@ -2166,26 +2166,6 @@ function flashBtn(id) {
   overlay.addEventListener('click', e => { if (e.target === overlay) hideOverlay(); });
   document.getElementById('saveSeparateBtn').addEventListener('click', () => { hideOverlay(); saveAllSeparate(); });
   document.getElementById('saveCombinedBtn').addEventListener('click', () => { hideOverlay(); saveAllCombined(); });
-
-  let holdTimer = null, didHold = false;
-
-  const onDown = () => {
-    didHold = false;
-    holdTimer = setTimeout(() => { didHold = true; holdTimer = null; showOverlay(); }, 600);
-  };
-
-  const onUp = () => {
-    clearTimeout(holdTimer); holdTimer = null;
-    if (!didHold) toggleRecord();
-    didHold = false;
-  };
-
-  saveBtn.addEventListener('mousedown', onDown);
-  saveBtn.addEventListener('mouseup', onUp);
-  saveBtn.addEventListener('mouseleave', () => { clearTimeout(holdTimer); holdTimer = null; didHold = false; });
-  saveBtn.addEventListener('touchstart', e => { e.preventDefault(); onDown(); }, { passive: false });
-  saveBtn.addEventListener('touchend', e => { e.preventDefault(); onUp(); }, { passive: false });
-  saveBtn.addEventListener('touchcancel', () => { clearTimeout(holdTimer); holdTimer = null; didHold = false; });
 })();
 
 // Collect filled slots (or current state if none saved)
@@ -2262,23 +2242,17 @@ let _mediaRecorder = null, _recChunks = [], _recArmed = false;
 function updateRecBtn() {
   const btn = document.getElementById('saveBtn');
   if (!btn) return;
-  const isRec = _recArmed && _mediaRecorder && _mediaRecorder.state === 'recording';
-  if (isRec || _recArmed) {
-    btn.textContent = 'REC';
+  const isRec = !!(  _recArmed && _mediaRecorder && _mediaRecorder.state === 'recording');
+  const isArmed = !!_recArmed;
+  if (isArmed) {
     btn.classList.add('rec-active');
   } else {
-    btn.textContent = 'REC';
     btn.classList.remove('rec-active');
   }
-  // Tape reels go red while recording
-  document.querySelectorAll('.reel').forEach(r => r.classList.toggle('recording', !!isRec));
+  document.querySelectorAll('.reel').forEach(r => r.classList.toggle('recording', isRec));
 }
 
-let _recHeld = false;
-function handleRecTap() {
-  if (!_recHeld) toggleRecord();
-  _recHeld = false;
-}
+function onRecClick() { toggleRecord(); }
 
 function toggleRecord() {
   if (!ctx) { alert('Start playback first'); return; }
@@ -2504,15 +2478,11 @@ function randAll(mode) {
   markModified();
 }
 
-// RAND button wiring — tap = randomize, hold = auto-retrigger every 4 bars
+// RAND button wiring
 (function() {
   const btn = document.getElementById('randBtn');
   if (!btn) return;
   let holdTimer = null, didHold = false, autoRandInterval = null;
-
-  function stopAuto() {
-    if (autoRandInterval) { clearInterval(autoRandInterval); autoRandInterval = null; btn.classList.remove('pulsing'); }
-  }
 
   const onDown = () => {
     didHold = false;
@@ -2520,23 +2490,29 @@ function randAll(mode) {
       didHold = true;
       btn.classList.add('pulsing');
       randAll();
-      autoRandInterval = setInterval(() => { randAll(); }, 4 * 4 * (60 / bpm) * 1000);
+      autoRandInterval = setInterval(() => { randAll(); }, 4 * (60 / bpm) * 1000);
     }, 600);
   };
 
   const onUp = () => {
     clearTimeout(holdTimer); holdTimer = null;
     if (!didHold) { flashBtn('randBtn'); randAll(); }
-    else stopAuto();
+    else if (autoRandInterval) { clearInterval(autoRandInterval); autoRandInterval = null; btn.classList.remove('pulsing'); }
     didHold = false;
   };
 
   btn.addEventListener('mousedown', onDown);
   btn.addEventListener('mouseup', onUp);
-  btn.addEventListener('mouseleave', () => { clearTimeout(holdTimer); holdTimer = null; didHold = false; stopAuto(); });
+  btn.addEventListener('mouseleave', () => {
+    clearTimeout(holdTimer); holdTimer = null; didHold = false;
+    if (autoRandInterval) { clearInterval(autoRandInterval); autoRandInterval = null; btn.classList.remove('pulsing'); }
+  });
   btn.addEventListener('touchstart', e => { e.preventDefault(); onDown(); }, { passive: false });
   btn.addEventListener('touchend', e => { e.preventDefault(); onUp(); }, { passive: false });
-  btn.addEventListener('touchcancel', () => { clearTimeout(holdTimer); holdTimer = null; didHold = false; stopAuto(); });
+  btn.addEventListener('touchcancel', () => {
+    clearTimeout(holdTimer); holdTimer = null; didHold = false;
+    if (autoRandInterval) { clearInterval(autoRandInterval); autoRandInterval = null; btn.classList.remove('pulsing'); }
+  });
 })();
 
 const NUM_SLOTS = 6, slots = new Array(NUM_SLOTS).fill(null);
@@ -2888,15 +2864,6 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(e => console.warn('SW:', e));
 }
 
-// TEST: force visual states on load
-window.addEventListener('load', () => {
-  const sb = document.getElementById('saveBtn');
-  if (sb) sb.classList.add('rec-active');
-  setTimeout(() => {
-    const rb = document.getElementById('randBtn');
-    if (rb) rb.classList.add('pulsing');
-  }, 2000);
-});
 </script>
 </body>
 </html>
