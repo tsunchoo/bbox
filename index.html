@@ -1075,7 +1075,7 @@ const _rhodesGlide = {};
 function playRhodes(freq, durSec, isAccent, time, tr) {
   if (!ctx || !freq) return;
   const dest = getSynthConnectNode(tr);
-  const vel = isAccent ? 0.38 : 0.26;
+  const vel = isAccent ? 0.240 : 0.164;
   _rhodesGlide[tr] = freq;
 
   // Inharmonicity factor — real piano strings stretch slightly
@@ -1311,7 +1311,7 @@ function playStab(freq, durSec, isAccent, time, tr) {
 function playRhodes2(freq, durSec, isAccent, time, tr) {
   if (!ctx || !freq) return;
   const dest = getSynthConnectNode(tr);
-  const vel = isAccent ? 0.32 : 0.22;
+  const vel = isAccent ? 0.202 : 0.139;
 
   const B = 0.00008; // less inharmonicity = warmer
   const inharmonic = n => freq * n * Math.sqrt(1 + B * n * n);
