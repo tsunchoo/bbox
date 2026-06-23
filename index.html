@@ -700,6 +700,21 @@ function scheduler() {
         }
       }
     }
+    // Beat: fire kick on steps 0,4,8,12 and snare on 2,6,10,14
+    if (beatPlaying) {
+      if (step % 4 === 0) {
+        playKick(t);
+        if (window._duckGain) {
+          const dg = window._duckGain.gain;
+          dg.cancelScheduledValues(t);
+          dg.setValueAtTime(1, t);
+          dg.linearRampToValueAtTime(0.5, t + 0.005);
+          dg.setTargetAtTime(1, t + 0.020, 0.08);
+        }
+      } else if (step % 4 === 2) {
+        playSnare(t);
+      }
+    }
     nextStepTime += stepDuration();
   }
 }
@@ -756,10 +771,12 @@ function togglePlay() {
   } else {
     clearInterval(scheduleInterval); scheduleInterval = null;
     btn.classList.remove('playing'); btn.textContent = 'PLAY';
-    updateBeatPulse();
     document.querySelectorAll('.reel-wrap').forEach(r => r.classList.remove('spinning'));
-
     document.querySelectorAll('.step-cell').forEach(el => el.classList.remove('playing'));
+    beatPlaying = false;
+    const bb = document.getElementById('beatBtn');
+    if (bb) { bb.classList.remove('active'); }
+    updateBeatPulse();
     // Auto-stop recording after half-bar delay (to capture reverb tail)
     if (_recArmed && _mediaRecorder && _mediaRecorder.state === 'recording') {
       const tailMs = (stepDuration() * 8) * 1000; // half bar
@@ -773,28 +790,8 @@ function togglePlay() {
 }
 
 // ── Beat button: Kick on 1&3, Snare on 2&4 ──
-let beatPlaying = false, beatStep = -1, beatNextTime = 0;
-function scheduleBeat() {
-  while (beatNextTime < ctx.currentTime + LOOKAHEAD) {
-    beatStep = (beatStep + 1) % 4;
-    const t = beatNextTime;
-    if (beatPlaying) {
-      if (beatStep === 0 || beatStep === 2) {
-        playKick(t);
-        if (window._duckGain) {
-          const dg = window._duckGain.gain;
-          dg.cancelScheduledValues(t);
-          dg.setValueAtTime(1, t);
-          dg.linearRampToValueAtTime(0.5, t + 0.005);
-          dg.setTargetAtTime(1, t + 0.020, 0.08);
-        }
-      } else {
-        playSnare(t);
-      }
-    }
-    beatNextTime += 60 / bpm;
-  }
-}
+let beatPlaying = false;
+
 function reverseBuffer(buf, revLen) {
   if (!buf || !ctx) return null;
   const numCh = buf.numberOfChannels, sr = buf.sampleRate;
@@ -2594,10 +2591,7 @@ async function initAudio() {
     const unlock = ctx.createBuffer(1,1,ctx.sampleRate);
     unlock.getChannelData(0)[0]=0.001;
     const src=ctx.createBufferSource(); src.buffer=unlock; src.connect(ctx.destination); src.start(0);
-    // Beat scheduler runs forever — beatPlaying gates whether notes fire
-    beatNextTime = ctx.currentTime + 0.1;
-    beatStep = -1;
-    setInterval(scheduleBeat, SCHEDULE_MS);
+
     msg.textContent = 'LOADING SAMPLES...';
     await loadSamples();
   } catch(e) {
