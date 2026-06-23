@@ -1708,6 +1708,29 @@ function redrawTrackCells(tr) {
   const tbtn = document.getElementById(`tbtn-${tr}`);
   if (tbtn) tbtn.classList.toggle('has-notes', grid[tr].some(v => v > 0));
 }
+function previewNote(tr, isAccent) {
+  if (!ctx) return;
+  ctx.resume();
+  const key = trackInstruments[tr];
+  const t = ctx.currentTime;
+  if (TONAL_KEYS.has(key)) {
+    const scale = trackBassScale[tr];
+    const freq = scale ? scale[0] : 220; // preview root note
+    const dur = 0.25;
+    if (key === 'sbass')   playSynthBass(freq, dur, isAccent, t, tr);
+    else if (key === 'sbass3')  playMotownBass(freq, dur, isAccent, t, tr);
+    else if (key === 'sbass4')  playPlunkBass(freq, dur, isAccent, t, tr);
+    else if (key === 'stab')    playStab(freq, dur, isAccent, t, tr);
+    else if (key === 'sstring') playStringSynth(freq, dur, isAccent, t, tr);
+    else if (key === 'sleg')    playSynthLeg(freq, dur, isAccent, t, tr);
+    else if (key === 'sparkle') playSparkle(freq, dur, isAccent, t, tr);
+    else if (key === 'rhodes')  playRhodes(freq, dur, isAccent, t, tr);
+    else if (key === 'rhodes2') playRhodes2(freq, dur, isAccent, t, tr);
+  } else {
+    playBuffer(key, isAccent, t, tr);
+  }
+}
+
 function tapStep(tr, s, cell) {
   const gs = (s - trackOffset[tr] + NUM_STEPS) % NUM_STEPS;
   grid[tr][gs] = (grid[tr][gs] + 1) % 3;
@@ -1715,10 +1738,7 @@ function tapStep(tr, s, cell) {
   cell.classList.toggle('on', val === 2); cell.classList.toggle('soft', val === 1);
   const tbtn = document.getElementById(`tbtn-${tr}`);
   if (tbtn) tbtn.classList.toggle('has-notes', grid[tr].some(v => v > 0));
-  if (val > 0 && ctx) {
-    ctx.resume();
-    playBuffer(trackInstruments[tr], val === 2, ctx.currentTime, tr);
-  }
+  if (val > 0 && ctx) previewNote(tr, val === 2);
   markModified();
 }
 
@@ -1736,7 +1756,7 @@ document.addEventListener('touchstart', e => {
   dragWrittenSteps = new Set([s]);
   const val = grid[tr][gs];
   cell.classList.toggle('on', val === 2); cell.classList.toggle('soft', val === 1);
-  if (val > 0 && ctx) { ctx.resume(); playBuffer(trackInstruments[tr], val === 2, ctx.currentTime, tr); }
+  if (val > 0) previewNote(tr, val === 2);
   markModified();
   e.preventDefault();
 }, { passive: false });
@@ -1771,7 +1791,7 @@ document.addEventListener('mousedown', e => {
   dragWriteTrack = tr; dragWrittenSteps = new Set([s]);
   const val = grid[tr][gs];
   cell.classList.toggle('on', val === 2); cell.classList.toggle('soft', val === 1);
-  if (val > 0 && ctx) { ctx.resume(); playBuffer(trackInstruments[tr], val === 2, ctx.currentTime, tr); }
+  if (val > 0) previewNote(tr, val === 2);
   markModified();
 });
 document.addEventListener('mousemove', e => {
@@ -2896,7 +2916,14 @@ function wireRandomizeButton(btn, tr) {
     if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
     if (!didHold) {
       if (autoShifting) stopAutoShift();
-      else randomizeTrack(tr);
+      else {
+        randomizeTrack(tr);
+        // Set track volume to 25%
+        trackVolume[tr] = 0.25;
+        if (trackGainNodes[tr] && ctx) trackGainNodes[tr].gain.setTargetAtTime(0.25, ctx.currentTime, 0.01);
+        const vb = document.getElementById(`vbar-${tr}`);
+        if (vb) { const f = vb.querySelector('.track-vol-fill'); if (f) f.style.width = '25%'; }
+      }
     }
   };
 
