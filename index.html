@@ -2165,27 +2165,33 @@ function flashBtn(id) {
   document.getElementById('saveSeparateBtn').addEventListener('click', () => { hideOverlay(); saveAllSeparate(); });
   document.getElementById('saveCombinedBtn').addEventListener('click', () => { hideOverlay(); saveAllCombined(); });
 
-  let holdTimer = null, didHold = false, isTouch = false;
+  let holdTimer = null, didHold = false;
 
-  function onPress() {
+  saveBtn.addEventListener('touchstart', e => {
+    e.preventDefault();
     didHold = false;
     holdTimer = setTimeout(() => {
-      didHold = true;
-      holdTimer = null;
+      didHold = true; holdTimer = null;
       showOverlay();
-    }, 400);
-  }
+    }, 500);
+  }, { passive: false });
 
-  function onRelease() {
+  saveBtn.addEventListener('touchend', e => {
+    e.preventDefault();
     if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
     if (!didHold) toggleRecord();
     didHold = false;
-  }
+  }, { passive: false });
 
-  saveBtn.addEventListener('touchstart', e => { e.preventDefault(); isTouch = true; onPress(); }, { passive: false });
-  saveBtn.addEventListener('touchend', e => { e.preventDefault(); onRelease(); isTouch = false; }, { passive: false });
-  saveBtn.addEventListener('mousedown', () => { if (isTouch) return; onPress(); });
-  saveBtn.addEventListener('mouseup', () => { if (isTouch) return; onRelease(); });
+  saveBtn.addEventListener('mousedown', () => {
+    didHold = false;
+    holdTimer = setTimeout(() => { didHold = true; holdTimer = null; showOverlay(); }, 500);
+  });
+  saveBtn.addEventListener('mouseup', () => {
+    if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+    if (!didHold) toggleRecord();
+    didHold = false;
+  });
   saveBtn.addEventListener('mouseleave', () => { if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; } });
 })();
 
@@ -2500,27 +2506,28 @@ function randAll(mode) {
 (function() {
   const btn = document.getElementById('randBtn');
   if (!btn) return;
-  let holdTimer = null, autoRandInterval = null, isTouch = false;
+  let holdTimer = null, autoRandInterval = null;
 
-  function startHold() {
+  btn.addEventListener('touchstart', e => {
+    e.preventDefault();
     holdTimer = setTimeout(() => {
       holdTimer = null;
       btn.classList.add('pulsing');
       randAll();
       autoRandInterval = setInterval(() => { randAll(); }, (60 / bpm) * 16 * 1000);
-    }, 400);
-  }
+    }, 500);
+  }, { passive: false });
 
-  function endHold() {
-    if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; flashBtn('randBtn'); randAll(); return; }
-    if (autoRandInterval) { clearInterval(autoRandInterval); autoRandInterval = null; btn.classList.remove('pulsing'); }
-  }
-
-  btn.addEventListener('touchstart', e => { e.preventDefault(); isTouch = true; startHold(); }, { passive: false });
-  btn.addEventListener('touchend', e => { e.preventDefault(); endHold(); }, { passive: false });
-  btn.addEventListener('mousedown', () => { if (isTouch) { isTouch = false; return; } startHold(); });
-  btn.addEventListener('mouseup', () => { if (isTouch) return; endHold(); });
-  btn.addEventListener('mouseleave', () => { if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; } });
+  btn.addEventListener('touchend', e => {
+    e.preventDefault();
+    if (holdTimer) {
+      clearTimeout(holdTimer); holdTimer = null;
+      flashBtn('randBtn'); randAll();
+    } else if (autoRandInterval) {
+      clearInterval(autoRandInterval); autoRandInterval = null;
+      btn.classList.remove('pulsing');
+    }
+  }, { passive: false });
 })();
 
 const NUM_SLOTS = 6, slots = new Array(NUM_SLOTS).fill(null);
