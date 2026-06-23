@@ -553,7 +553,7 @@ function playBuffer(key, isAccent, time, tr) {
   }
   const src = ctx.createBufferSource(); src.buffer = buf;
   const instrumentGain = ctx.createGain();
-  instrumentGain.gain.value = (key === 'shak') ? 0.5 : (key === 'clap') ? 0.707 : 1.0;
+  instrumentGain.gain.value = (key === 'shak') ? 0.5 : (key === 'clap') ? 0.707 : (key === 'congHi' || key === 'congLo' || key === 'bongHi' || key === 'bongLo') ? 0.631 : 1.0;
   const fxVal = trackFx[tr];
   const on = fxVal && (fxVal.x > 0 || fxVal.y > 0);
   if (tr !== undefined && trackFxNodes[tr] && on) {
@@ -975,11 +975,19 @@ function randomizeBassTrack(tr, level) {
 
   trackBassScale[tr] = buildScaleFromRoot(root);
 
-  const [minN, maxN, accentRatio] = [
+  // Per-instrument note density rules
+  const noteTables = {
+    sstring: [[1,2,0.10],[2,4,0.20],[3,6,0.30]],   // Strings — fewest
+    sleg:    [[1,2,0.10],[2,4,0.20],[3,6,0.30]],   // Strings+ — fewest
+    rhodes:  [[2,4,0.15],[4,7,0.30],[6,10,0.45]],  // Piano — medium
+    rhodes2: [[2,4,0.15],[4,7,0.30],[6,10,0.45]],  // Rhodes — medium
+  };
+  const levelTable = noteTables[key] || [
     [3, 6,  0.20],
     [6, 10, 0.40],
     [10, 16, 0.60],
-  ][level];
+  ];
+  const [minN, maxN, accentRatio] = levelTable[level];
   const noteCount = minN + Math.floor(Math.random() * (maxN - minN + 1));
   placeNotes(tr, noteCount, accentRatio, level);
   redrawTrackCells(tr); markModified();
