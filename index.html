@@ -548,13 +548,19 @@ function playBuffer(key, isAccent, time, tr) {
   const buf = buffers[key]?.[isAccent ? 'accent' : 'soft'];
   if (!buf) return;
 
-  // S: stutter gate — hard chop at 35% of step duration
-  if (tr !== undefined && trackSweep[tr] && trackEnvFilters[tr]) {
-    const chopLen = stepDuration() * 0.35;
-    const ef = trackEnvFilters[tr];
-    ef.frequency.cancelScheduledValues(time);
-    ef.frequency.setValueAtTime(22050, time);
-    // No filter action for samples — just amplitude gate via instrumentGain below
+  // S: reverse sweep — play sample reversed leading into note
+  if (tr !== undefined && trackSweep[tr] && buf) {
+    const revLen = Math.min(buf.duration, stepDuration() * 2); // up to 2 steps of reverse
+    const revBuf = reverseBuffer(buf, revLen);
+    if (revBuf) {
+      const revSrc = ctx.createBufferSource(); revSrc.buffer = revBuf;
+      const revGain = ctx.createGain();
+      revGain.gain.setValueAtTime(0, Math.max(ctx.currentTime, time - revLen));
+      revGain.gain.linearRampToValueAtTime(instrumentGain.gain.value * 0.8, time);
+      const revDest = (tr !== undefined && trackFxNodes[tr] && trackFx[tr] && (trackFx[tr].x > 0)) ? trackFxNodes[tr].fxSend : ((tr !== undefined && trackGainNodes[tr]) ? trackGainNodes[tr] : masterGain);
+      revSrc.connect(revGain); revGain.connect(revDest);
+      revSrc.start(Math.max(ctx.currentTime, time - revLen));
+    }
   }
   const src = ctx.createBufferSource(); src.buffer = buf;
   const instrumentGain = ctx.createGain();
@@ -568,13 +574,6 @@ function playBuffer(key, isAccent, time, tr) {
     src.connect(instrumentGain); instrumentGain.connect(trackFxNodes[tr].dryGain);
   } else {
     src.connect(instrumentGain); instrumentGain.connect((tr !== undefined && trackGainNodes[tr]) ? trackGainNodes[tr] : masterGain);
-  }
-  // Stutter gate: hard cut after chopLen
-  if (tr !== undefined && trackSweep[tr]) {
-    const chopLen = stepDuration() * 0.35;
-    instrumentGain.gain.setValueAtTime(instrumentGain.gain.value, time);
-    instrumentGain.gain.setValueAtTime(instrumentGain.gain.value, time + chopLen);
-    instrumentGain.gain.linearRampToValueAtTime(0, time + chopLen + 0.008);
   }
   src.start(time);
 }
