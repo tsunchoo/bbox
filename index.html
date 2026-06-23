@@ -2524,6 +2524,24 @@ function randAll(mode) {
     const vb = document.getElementById(`vbar-${tr}`);
     if (vb) { const f = vb.querySelector('.track-vol-fill'); if (f) f.style.width = '50%'; }
   }
+  // Voice harmony: if >1 melody tonal track, shift 2nd+ up an octave + minor third
+  const melodyKeys = new Set(['sstring','sleg','sparkle','rhodes','rhodes2','stab']);
+  const bassKeys2 = new Set(['sbass','sbass3','sbass4']);
+  const melodyTracks = [];
+  for (let tr = 0; tr < NUM_TRACKS; tr++) {
+    if (melodyKeys.has(pool[tr])) melodyTracks.push(tr);
+  }
+  if (melodyTracks.length > 1) {
+    const minorThird = Math.pow(2, 3/12); // 3 semitones up
+    for (let i = 1; i < melodyTracks.length; i++) {
+      const tr = melodyTracks[i];
+      if (trackBassScale[tr]) {
+        // Shift up one octave + minor third
+        trackBassScale[tr] = trackBassScale[tr].map(f => f * 2 * minorThird);
+      }
+    }
+  }
+
   markModified();
 }
 
