@@ -1859,16 +1859,50 @@ async function renderSlotToWav(snap) {
           env.gain.exponentialRampToValueAtTime(0.001,t+0.18);
           src2.connect(lp); lp.connect(env); env.connect(offDest); src2.start(t); src2.stop(t+0.2);
         } else if (key === 'rhodes') {
-          const partials = [{ratio:1,amp:1,dm:1},{ratio:2,amp:0.18,dm:0.55},{ratio:3,amp:0.05,dm:0.35},{ratio:4,amp:0.02,dm:0.22}];
-          const decayLen = Math.min(dur+0.8,3.5);
-          partials.forEach(({ratio,amp,dm}) => {
-            const osc = offline.createOscillator(); osc.type='sine'; osc.frequency.value=freq*ratio;
-            const env = offline.createGain(); const pv=vel*0.6*amp;
-            env.gain.setValueAtTime(0,t); env.gain.linearRampToValueAtTime(pv,t+0.004);
-            env.gain.exponentialRampToValueAtTime(pv*0.6,t+0.04);
-            env.gain.exponentialRampToValueAtTime(0.001,t+decayLen*dm);
-            osc.connect(env); env.connect(offDest); osc.start(t); osc.stop(t+decayLen*dm+0.05);
+          // Exact match to live playRhodes voice
+          const rVel = isAccent ? 0.38 : 0.26;
+          const B = 0.00015;
+          const inharmonic = n => freq * n * Math.sqrt(1 + B * n * n);
+          const baseDec = Math.min(dur + 0.6, 1.8) * (1 + Math.max(0, (300 - freq) / 300) * 0.8);
+          const rPartials = [
+            { n:1, amp:1.00, dec:1.00 }, { n:2, amp:0.50, dec:0.65 },
+            { n:3, amp:0.25, dec:0.42 }, { n:4, amp:0.12, dec:0.28 },
+            { n:5, amp:0.05, dec:0.18 }, { n:6, amp:0.02, dec:0.12 },
+          ];
+          rPartials.forEach(({ n, amp, dec }) => {
+            const osc = offline.createOscillator(); osc.type = 'sine';
+            osc.frequency.value = inharmonic(n);
+            const env = offline.createGain();
+            const pk = rVel * amp; const decT = baseDec * dec;
+            env.gain.setValueAtTime(0, t);
+            env.gain.linearRampToValueAtTime(pk, t + 0.002);
+            env.gain.exponentialRampToValueAtTime(pk * 0.55, t + 0.015);
+            env.gain.exponentialRampToValueAtTime(0.0001, t + decT);
+            osc.connect(env); env.connect(offDest); osc.start(t); osc.stop(t + decT + 0.05);
           });
+          // Hammer transient
+          const thumpLen = 0.025;
+          const thumpBuf = offline.createBuffer(1, Math.ceil(sampleRate * thumpLen), sampleRate);
+          const td = thumpBuf.getChannelData(0);
+          for (let i = 0; i < td.length; i++) td[i] = (Math.random()*2-1) * Math.pow(1-i/td.length, 2);
+          const thump = offline.createBufferSource(); thump.buffer = thumpBuf;
+          const thumpLP = offline.createBiquadFilter(); thumpLP.type = 'lowpass';
+          thumpLP.frequency.setValueAtTime(4000, t);
+          thumpLP.frequency.exponentialRampToValueAtTime(300, t + thumpLen);
+          const thumpEnv = offline.createGain(); thumpEnv.gain.value = rVel * 0.4;
+          thump.connect(thumpLP); thumpLP.connect(thumpEnv); thumpEnv.connect(offDest);
+          thump.start(t);
+          // Body resonance
+          const bodyLen = 0.04;
+          const bodyBuf = offline.createBuffer(1, Math.ceil(sampleRate * bodyLen), sampleRate);
+          const bd = bodyBuf.getChannelData(0);
+          for (let i = 0; i < bd.length; i++) bd[i] = (Math.random()*2-1) * Math.pow(1-i/bd.length, 1.2);
+          const body = offline.createBufferSource(); body.buffer = bodyBuf;
+          const bodyBP = offline.createBiquadFilter(); bodyBP.type = 'bandpass';
+          bodyBP.frequency.value = freq * 2; bodyBP.Q.value = 3;
+          const bodyEnv = offline.createGain(); bodyEnv.gain.value = rVel * 0.12;
+          body.connect(bodyBP); bodyBP.connect(bodyEnv); bodyEnv.connect(offDest);
+          body.start(t);
         }
         continue;
       }
