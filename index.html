@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>BOOMBLAP v14</title>
+<title>BOOMBLAP v15</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
 :root {
@@ -117,7 +117,9 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 .track-ctrl-icon-btn.on { background: var(--playhead); color: #fff; }
 .track-ctrl-icon-btn.sweep-on { background: #5bbcb8; color: #fff; }
 .rand-btn.pulsing { color: #fff; animation: pulse 0.5s infinite alternate; }
-#randBtn.pulsing { background: var(--playhead); color: #fff; animation: pulse 0.5s infinite alternate; }
+#randBtn { background: #5e18eb !important; color: #fff !important; }
+#randBtn.pulsing { animation: rand-pulse 0.5s infinite alternate; }
+@keyframes rand-pulse { from { background: #5e18eb; color: #fff; } to { background: #3a0a9e; color: #fff; } }
 @keyframes pulse { from { background: var(--playhead); color: #fff; } to { background: #ff7755; color: #fff; } }
 .track-ctrl-icon-btn.playing { opacity: 0.45; }
 .shift-btn {
@@ -179,18 +181,18 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 /* Instrument group colours */
 .inst-kit   { background: #1a3a6b; color: #fff; }
 .inst-perc  { background: #2a7a3a; color: #fff; }
-.inst-tonal { background: #ff6600; color: #fff; }
+.inst-tonal { background: #fd475d; color: #fff; }
 .inst-kit:hover   { background: #0d1f40; color: #fff; }
 .inst-perc:hover  { background: #1a5228; color: #fff; }
-.inst-tonal:hover { background: #cc5200; color: #fff; }
+.inst-tonal:hover { background: #fd475d; color: #fff; }
 .inst-kit.active, .inst-perc.active, .inst-tonal.active { background: var(--text); color: var(--bg); border: none; }
 /* Track name buttons inherit group color */
 .track-name-btn.inst-kit   { background: #1a3a6b; color: #fff; }
 .track-name-btn.inst-perc  { background: #2a7a3a; color: #fff; }
-.track-name-btn.inst-tonal { background: #ff6600; color: #fff; }
+.track-name-btn.inst-tonal { background: #fd475d; color: #fff; }
 .track-name-btn.has-notes.inst-kit   { background: #1a3a6b; }
 .track-name-btn.has-notes.inst-perc  { background: #2a7a3a; }
-.track-name-btn.has-notes.inst-tonal { background: #ff6600; }
+.track-name-btn.has-notes.inst-tonal { background: #fd475d; }
 .track-name-btn.playing { background: var(--playhead) !important; color: #fff !important; }
 
 /* ── Vol overlay ── */
@@ -353,10 +355,10 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 </header>
 
 <div class="transport">
-  <button class="btn" id="playBtn" onclick="togglePlay()">PLAY</button>
+  <button class="btn" id="playBtn" onclick="togglePlay()">▶</button>
   <button class="btn" id="beatBtn" onclick="toggleBeat()">BEAT</button>
   <button class="btn" id="clearBtn" onclick="fullClear()">CLEAR</button>
-  <button class="btn" id="randBtn">RAND</button>
+  <button class="btn" id="randBtn" style="background:#5e18eb;color:#fff;">RAND</button>
   <button class="btn" id="bpmBtn" onclick="toggleBpmOverlay()"><span id="bpmVal">110</span> BPM</button>
   <button class="btn" id="saveBtn" onclick="onRecClick()">REC</button>
 </div>
@@ -594,6 +596,11 @@ function scheduler() {
   while (nextStepTime < ctx.currentTime + LOOKAHEAD) {
     const step = (currentStep + 1) % NUM_STEPS; currentStep = step;
     const t = nextStepTime;
+    // Fire pending auto-rand on downbeat
+    if (step === 0 && _autoRandPending) {
+      _autoRandPending = false;
+      randAll();
+    }
     // Apply pending slot swap before audio is scheduled so step 0 plays from the new pattern
     if (step === 0 && _pendingSlot >= 0) {
       const pi = _pendingSlot; _pendingSlot = -1;
@@ -774,7 +781,7 @@ function togglePlay() {
   if (playing) {
     currentStep = -1; nextStepTime = ctx.currentTime + 0.05;
     scheduleInterval = setInterval(scheduler, SCHEDULE_MS);
-    btn.classList.add('playing'); btn.textContent = 'STOP';
+    btn.classList.add('playing'); btn.textContent = '⏹';
     updateBeatPulse();
     document.querySelectorAll('.reel-wrap').forEach(r => r.classList.add('spinning'));
 
@@ -785,7 +792,7 @@ function togglePlay() {
     }
   } else {
     clearInterval(scheduleInterval); scheduleInterval = null;
-    btn.classList.remove('playing'); btn.textContent = 'PLAY';
+    btn.classList.remove('playing'); btn.textContent = '▶';
     updateBeatPulse();
     document.querySelectorAll('.reel-wrap').forEach(r => r.classList.remove('spinning'));
     // Stop and deactivate beat
@@ -1422,7 +1429,7 @@ function setTrackNameColor(tr, key) {
   const btn = document.getElementById(`tbtn-${tr}`); if (!btn) return;
   btn.classList.remove('inst-kit','inst-perc','inst-tonal');
   const g = INSTRUMENTS[key]?.group || 'perc';
-  const _laneColors = {'kit':'#1a3a6b','perc':'#2a7a3a','tonal':'#ff6600'};
+  const _laneColors = {'kit':'#1a3a6b','perc':'#2a7a3a','tonal':'#fd475d'};
   const lane = document.getElementById(`lane-${tr}`);
   if (lane) lane.style.setProperty('--track-color', _laneColors[g] || 'var(--text)');
   btn.classList.add('inst-' + g);
@@ -1602,7 +1609,7 @@ function buildUI() {
     // ── Step row — full width, no shift buttons here ──
     const row = document.createElement('div'); row.className = 'track-row';
     const lane = document.createElement('div'); lane.className = 'step-lane';
-    const _tcolor = {'kit':'#1a3a6b','perc':'#2a7a3a','tonal':'#ff6600'}[INSTRUMENTS[trackInstruments[tr]]?.group] || 'var(--text)';
+    const _tcolor = {'kit':'#1a3a6b','perc':'#2a7a3a','tonal':'#fd475d'}[INSTRUMENTS[trackInstruments[tr]]?.group] || 'var(--text)';
     lane.style.setProperty('--track-color', _tcolor);
     lane.id = `lane-${tr}`;
     const cells = document.createElement('div'); cells.className = 'step-lane-cells';
@@ -2237,6 +2244,7 @@ async function saveAllCombined() {
 }
 
 // ── Live recording via MediaRecorder ──
+let _autoRandPending = false;
 let _mediaRecorder = null, _recChunks = [], _recArmed = false;
 
 function updateRecBtn() {
@@ -2489,6 +2497,7 @@ function randAll(mode) {
   const stopAuto = () => {
     if (autoRandInterval) {
       clearInterval(autoRandInterval); autoRandInterval = null;
+      _autoRandPending = false;
       btn.classList.remove('pulsing');
     }
   };
@@ -2496,8 +2505,9 @@ function randAll(mode) {
   const startAuto = () => {
     if (autoRandInterval) { stopAuto(); return; } // second tap stops it
     btn.classList.add('pulsing');
-    randAll();
-    autoRandInterval = setInterval(() => { randAll(); }, 4 * (60 / bpm) * 1000);
+    _autoRandPending = true; // fires on next step 0
+    // Then re-trigger every 4 bars
+    autoRandInterval = setInterval(() => { _autoRandPending = true; }, 4 * 4 * (60 / bpm) * 1000);
   };
 
   // Single tap = one rand. Double tap = start/stop auto mode.
