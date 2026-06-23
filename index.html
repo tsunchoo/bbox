@@ -349,6 +349,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BOOMBOX</h1>
+  <div id="keyDisplay" style="font-family:'DM Sans',sans-serif;font-size:0.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--dim);height:12px;line-height:12px;margin-top:2px;"></div>
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
       <img class="reel" id="reel1" src="tape_spool.png" alt="">
@@ -1075,7 +1076,7 @@ const _slegGlide = {};
 function playSynthLeg(freq, durSec, isAccent, time, tr) {
   if (!ctx || !freq) return;
   const dest = getSynthConnectNode(tr);
-  const vol = isAccent ? 0.055 : 0.038;
+  const vol = isAccent ? 0.035 : 0.024;
   const prevFreq = _slegGlide[tr] || freq;
   _slegGlide[tr] = freq;
   const glide = Math.min(0.1, durSec * 0.2);
@@ -2722,6 +2723,9 @@ function randAll(mode) {
     }
   }
 
+  // Update key/scale display
+  const kd = document.getElementById('keyDisplay');
+  if (kd) { const kn = getKeyName(); kd.textContent = kn || ''; }
   markModified();
 }
 
@@ -3170,23 +3174,19 @@ if ('serviceWorker' in navigator) {
   function startSweep() {
     if (!ctx) return;
     ctx.resume();
-    const dur = stepDuration() * 16; // one measure
+    const dur = stepDuration() * 16;
     const t = ctx.currentTime;
-
-    // Randomise each trigger: start freq 100-400Hz, end freq 4000-12000Hz, Q 1.5-6
-    const startFreq = 100 + Math.random() * 300;
-    const endFreq   = 4000 + Math.random() * 8000;
-    const Q = 0.5 + Math.random() * 0.8; // low Q = wide, smooth sweep
 
     const noise = ctx.createBufferSource();
     const bufLen = Math.ceil(ctx.sampleRate * (dur + 1));
-    const buf = ctx.createBuffer(2, bufLen, ctx.sampleRate); // stereo for richness
-    for (let ch = 0; ch < 2; ch++) { const d = buf.getChannelData(ch); for (let i = 0; i < bufLen; i++) d[i] = Math.random() * 2 - 1; }
+    const buf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < bufLen; i++) d[i] = Math.random() * 2 - 1;
     noise.buffer = buf;
 
-    const bp = ctx.createBiquadFilter(); bp.type = 'lowpass'; bp.Q.value = Q;
-    bp.frequency.setValueAtTime(startFreq, t);
-    bp.frequency.exponentialRampToValueAtTime(endFreq, t + dur);
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 3;
+    bp.frequency.setValueAtTime(200, t);
+    bp.frequency.exponentialRampToValueAtTime(8000, t + dur);
 
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0, t);
