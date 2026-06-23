@@ -51,7 +51,7 @@ header .sub { font-size: 0.44rem; color: var(--dim); letter-spacing: 2px; text-t
   flex: 1; padding: 0 4px; flex-shrink: 1;
 }
 .btn {
-  background: #b0b0b0; border: none; color: var(--text);
+  background: #555; border: none; color: #fff;
   font-family: 'DM Sans', sans-serif; font-size: 0.72rem; font-weight: 700;
   letter-spacing: 0.5px; padding: 0 10px; cursor: pointer; text-transform: uppercase;
   transition: background 0.1s, color 0.1s; height: 54px; flex-shrink: 0; white-space: nowrap;
@@ -117,8 +117,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 .track-ctrl-icon-btn.on { background: var(--playhead); color: #fff; }
 .track-ctrl-icon-btn.sweep-on { background: #5bbcb8; color: #fff; }
 .rand-btn.pulsing { color: #fff; animation: pulse 0.5s infinite alternate; }
-#randBtn { background: #5e18eb !important; color: #fff !important; }
-#randBtn.pulsing { animation: rand-pulse 0.5s infinite alternate; }
+#randBtn.pulsing { background: #5e18eb; color: #fff; animation: rand-pulse 0.5s infinite alternate; }
 @keyframes rand-pulse { from { background: #5e18eb; color: #fff; } to { background: #3a0a9e; color: #fff; } }
 @keyframes pulse { from { background: var(--playhead); color: #fff; } to { background: #ff7755; color: #fff; } }
 .track-ctrl-icon-btn.playing { opacity: 0.45; }
@@ -133,7 +132,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 .shift-btn:active { opacity: 0.4; }
 .track-vol-bar {
   flex: 1; position: relative; overflow: hidden;
-  background: #b0b0b0; border: none;
+  background: #555; border: none;
   cursor: ew-resize; touch-action: none;
   -webkit-tap-highlight-color: transparent;
 }
@@ -355,10 +354,10 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 </header>
 
 <div class="transport">
-  <button class="btn" id="playBtn" onclick="togglePlay()">▶</button>
+  <button class="btn" id="playBtn" onclick="togglePlay()">PLAY</button>
   <button class="btn" id="beatBtn" onclick="toggleBeat()">BEAT</button>
   <button class="btn" id="clearBtn" onclick="fullClear()">CLEAR</button>
-  <button class="btn" id="randBtn" style="background:#5e18eb;color:#fff;">RAND</button>
+  <button class="btn" id="randBtn">RAND</button>
   <button class="btn" id="bpmBtn" onclick="toggleBpmOverlay()"><span id="bpmVal">110</span> BPM</button>
   <button class="btn" id="saveBtn" onclick="onRecClick()">REC</button>
 </div>
@@ -781,7 +780,7 @@ function togglePlay() {
   if (playing) {
     currentStep = -1; nextStepTime = ctx.currentTime + 0.05;
     scheduleInterval = setInterval(scheduler, SCHEDULE_MS);
-    btn.classList.add('playing'); btn.textContent = '⏹';
+    btn.classList.add('playing'); btn.textContent = 'STOP';
     updateBeatPulse();
     document.querySelectorAll('.reel-wrap').forEach(r => r.classList.add('spinning'));
 
@@ -792,7 +791,7 @@ function togglePlay() {
     }
   } else {
     clearInterval(scheduleInterval); scheduleInterval = null;
-    btn.classList.remove('playing'); btn.textContent = '▶';
+    btn.classList.remove('playing'); btn.textContent = 'PLAY';
     updateBeatPulse();
     document.querySelectorAll('.reel-wrap').forEach(r => r.classList.remove('spinning'));
     // Stop and deactivate beat
@@ -2520,7 +2519,7 @@ function randAll(mode) {
     } else {
       // Single tap — one rand
       if (autoRandInterval) { stopAuto(); }
-      else { flashBtn('randBtn'); randAll(); }
+      else { const rb=document.getElementById('randBtn'); rb.style.background='#5e18eb'; rb.style.color='#fff'; setTimeout(()=>{rb.style.background='';rb.style.color='';},200); randAll(); }
     }
     lastTap = now;
   };
