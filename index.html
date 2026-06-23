@@ -356,7 +356,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
   <button class="btn" id="clearBtn" onclick="fullClear()">CLEAR</button>
   <button class="btn" id="randBtn">RAND</button>
   <button class="btn" id="bpmBtn" onclick="toggleBpmOverlay()"><span id="bpmVal">110</span> BPM</button>
-  <button class="btn" id="saveBtn">SAVE</button>
+  <button class="btn" id="saveBtn">REC</button>
 </div>
 
 
@@ -365,9 +365,8 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 <div id="saveOverlay" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(245,240,232,0.95);align-items:center;justify-content:center;touch-action:none;">
   <div style="display:flex;flex-direction:column;gap:12px;padding:24px;border:none;background:var(--bg);width:min(320px,88vw);">
     <div style="font-size:0.65rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--dim);font-family:'DM Sans',sans-serif;">EXPORT</div>
-    <button class="rand-overlay-btn" id="saveSeparateBtn">SEPARATE FILES</button>
-    <button class="rand-overlay-btn" id="saveCombinedBtn">ONE FILE</button>
-    <button class="rand-overlay-btn" id="saveRecordBtn">RECORD</button>
+    <button class="rand-overlay-btn" id="saveSeparateBtn">EXPORT SLOTS</button>
+    <button class="rand-overlay-btn" id="saveCombinedBtn">EXPORT LOOP</button>
   </div>
 </div>
 
@@ -642,7 +641,7 @@ function scheduler() {
       const val = grid[tr][gs];
       if (val > 0) {
         const key = trackInstruments[tr];
-        if (key === 'sbass' || key === 'sbass3' || key === 'sbass4' || key === 'stab' || key === 'sstring' || key === 'sleg' || key === 'sparkle' || key === 'rhodes') {
+        if (key === 'sbass' || key === 'sbass3' || key === 'sbass4' || key === 'stab' || key === 'sstring' || key === 'sleg' || key === 'sparkle' || key === 'rhodes' || key === 'rhodes2') {
           const scale = trackBassScale[tr] || [110];
           const noteIdx = gs % scale.length;
           const freq = scale[noteIdx];
@@ -2154,7 +2153,7 @@ function flashBtn(id) {
   b.classList.add('btn-flash');
   setTimeout(() => b.classList.remove('btn-flash'), 300);
 }
-// ── Save overlay wiring ──
+// ── REC button wiring — tap=record toggle, hold=export overlay ──
 (function() {
   const saveBtn = document.getElementById('saveBtn');
   const overlay = document.getElementById('saveOverlay');
@@ -2162,13 +2161,35 @@ function flashBtn(id) {
 
   function showOverlay() { overlay.style.display = 'flex'; }
   function hideOverlay() { overlay.style.display = 'none'; }
-
-  saveBtn.addEventListener('click', () => { if (_recArmed) { toggleRecord(); } else { showOverlay(); flashBtn('saveBtn'); } });
   overlay.addEventListener('click', e => { if (e.target === overlay) hideOverlay(); });
-
   document.getElementById('saveSeparateBtn').addEventListener('click', () => { hideOverlay(); saveAllSeparate(); });
   document.getElementById('saveCombinedBtn').addEventListener('click', () => { hideOverlay(); saveAllCombined(); });
-  document.getElementById('saveRecordBtn').addEventListener('click', () => { hideOverlay(); toggleRecord(); });
+
+  let holdTimer = null, didHold = false;
+
+  function onPress() {
+    didHold = false;
+    holdTimer = setTimeout(() => {
+      didHold = true;
+      holdTimer = null;
+      showOverlay();
+    }, 400);
+  }
+
+  function onRelease() {
+    if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+    if (!didHold) {
+      // Tap — toggle recording
+      toggleRecord();
+    }
+    didHold = false;
+  }
+
+  saveBtn.addEventListener('mousedown', onPress);
+  saveBtn.addEventListener('mouseup', onRelease);
+  saveBtn.addEventListener('mouseleave', () => { if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; } });
+  saveBtn.addEventListener('touchstart', e => { e.preventDefault(); onPress(); }, { passive: false });
+  saveBtn.addEventListener('touchend', e => { e.preventDefault(); onRelease(); }, { passive: false });
 })();
 
 // Collect filled slots (or current state if none saved)
@@ -2246,12 +2267,11 @@ function updateRecBtn() {
   const btn = document.getElementById('saveBtn');
   if (!btn) return;
   const isRec = _recArmed && _mediaRecorder && _mediaRecorder.state === 'recording';
-  const isArmed = _recArmed;
-  if (isRec || isArmed) {
-    btn.textContent = 'R';
+  if (isRec || _recArmed) {
+    btn.textContent = 'REC';
     btn.classList.add('rec-active');
   } else {
-    btn.textContent = 'SAVE';
+    btn.textContent = 'REC';
     btn.classList.remove('rec-active');
   }
   // Tape reels go red while recording
