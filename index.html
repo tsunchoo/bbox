@@ -355,9 +355,9 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
   <button class="btn" id="playBtn" onclick="togglePlay()">PLAY</button>
   <button class="btn" id="beatBtn" onclick="toggleBeat()">BEAT</button>
   <button class="btn" id="clearBtn" onclick="fullClear()">CLEAR</button>
-  <button class="btn" id="randBtn">RAND</button>
+  <button class="btn" id="randBtn" onclick="handleRandTap()">RAND</button>
   <button class="btn" id="bpmBtn" onclick="toggleBpmOverlay()"><span id="bpmVal">110</span> BPM</button>
-  <button class="btn" id="saveBtn">REC</button>
+  <button class="btn" id="saveBtn" onclick="handleRecTap()">REC</button>
 </div>
 
 
@@ -2166,23 +2166,23 @@ function flashBtn(id) {
   document.getElementById('saveSeparateBtn').addEventListener('click', () => { hideOverlay(); saveAllSeparate(); });
   document.getElementById('saveCombinedBtn').addEventListener('click', () => { hideOverlay(); saveAllCombined(); });
 
-  let holdTimer = null, didHold = false;
+  let holdTimer = null;
 
   saveBtn.addEventListener('pointerdown', e => {
     saveBtn.setPointerCapture(e.pointerId);
-    didHold = false;
-    holdTimer = setTimeout(() => { didHold = true; holdTimer = null; showOverlay(); }, 500);
+    holdTimer = setTimeout(() => {
+      holdTimer = null;
+      _recHeld = true;
+      showOverlay();
+    }, 500);
   });
 
   saveBtn.addEventListener('pointerup', () => {
     if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
-    if (!didHold) toggleRecord();
-    didHold = false;
   });
 
   saveBtn.addEventListener('pointercancel', () => {
     if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
-    didHold = false;
   });
 })();
 
@@ -2271,6 +2271,12 @@ function updateRecBtn() {
   // Tape reels go red while recording
   document.querySelectorAll('.reel').forEach(r => r.classList.toggle('recording', !!isRec));
 }
+
+function handleRecTap() {
+  if (!_recHeld) toggleRecord();
+  _recHeld = false;
+}
+let _recHeld = false;
 
 function toggleRecord() {
   if (!ctx) { alert('Start playback first'); return; }
@@ -2444,6 +2450,12 @@ document.addEventListener('click', e => {
 
 let randAllLevel = 0;
 
+let _randHeld = false;
+function handleRandTap() {
+  if (!_randHeld) { flashBtn('randBtn'); randAll(); }
+  _randHeld = false;
+}
+
 function randAll(mode) {
   mode = mode || 'all';
   const level = randAllLevel;
@@ -2490,7 +2502,7 @@ function randAll(mode) {
   markModified();
 }
 
-// RAND button wiring — tap = randomize once, hold = auto-retrigger every 4 measures
+// RAND button wiring — hold = auto-retrigger (tap handled by onclick)
 (function() {
   const btn = document.getElementById('randBtn');
   if (!btn) return;
@@ -2500,20 +2512,16 @@ function randAll(mode) {
     btn.setPointerCapture(e.pointerId);
     holdTimer = setTimeout(() => {
       holdTimer = null;
+      _randHeld = true;
       btn.classList.add('pulsing');
       randAll();
       autoRandInterval = setInterval(() => { randAll(); }, (60 / bpm) * 16 * 1000);
     }, 500);
   });
 
-  btn.addEventListener('pointerup', e => {
-    if (holdTimer) {
-      clearTimeout(holdTimer); holdTimer = null;
-      flashBtn('randBtn'); randAll();
-    } else if (autoRandInterval) {
-      clearInterval(autoRandInterval); autoRandInterval = null;
-      btn.classList.remove('pulsing');
-    }
+  btn.addEventListener('pointerup', () => {
+    if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; return; }
+    if (autoRandInterval) { clearInterval(autoRandInterval); autoRandInterval = null; btn.classList.remove('pulsing'); }
   });
 
   btn.addEventListener('pointercancel', () => {
