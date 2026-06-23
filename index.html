@@ -1771,6 +1771,32 @@ async function renderSlotToWav(snap) {
     const slotGrid = snap.grid?.[tr] || [];
     const offset = snap.trackOffset?.[tr] || 0;
     const key = snap.trackInstruments?.[tr] || trackInstruments[tr];
+
+    // Pre-create shared reverb nodes for string voices (one per track, not per note)
+    let sstringHP, sstringRev, slegHP, slegRev;
+    if (key === 'sstring') {
+      const irLen = Math.floor(sampleRate*0.4);
+      const irBuf = offline.createBuffer(2,irLen,sampleRate);
+      for (let ch=0;ch<2;ch++){const d=irBuf.getChannelData(ch); for(let i=0;i<irLen;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/irLen,1.2);}
+      const rev = offline.createConvolver(); rev.buffer=irBuf;
+      const dryG = offline.createGain(); dryG.gain.value=0.5; dryG.connect(offDest);
+      const revG = offline.createGain(); revG.gain.value=0.5; revG.connect(offDest);
+      sstringHP = offline.createBiquadFilter(); sstringHP.type='highpass'; sstringHP.frequency.value=400; sstringHP.Q.value=0.7;
+      sstringHP.connect(dryG); sstringHP.connect(rev); rev.connect(revG);
+      sstringRev = sstringHP; // oscillators connect here
+    }
+    if (key === 'sleg') {
+      const irLen = Math.floor(sampleRate*0.5);
+      const irBuf = offline.createBuffer(2,irLen,sampleRate);
+      for (let ch=0;ch<2;ch++){const d=irBuf.getChannelData(ch); for(let i=0;i<irLen;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/irLen,1.5);}
+      const rev = offline.createConvolver(); rev.buffer=irBuf;
+      const dryG = offline.createGain(); dryG.gain.value=0.5; dryG.connect(offDest);
+      const revG = offline.createGain(); revG.gain.value=0.5; revG.connect(offDest);
+      slegHP = offline.createBiquadFilter(); slegHP.type='highpass'; slegHP.frequency.value=500; slegHP.Q.value=0.7;
+      slegHP.connect(dryG); slegHP.connect(rev); rev.connect(revG);
+      slegRev = slegHP;
+    }
+
     for (let measure = 0; measure < NUM_MEASURES; measure++) {
       const measureOffset = measure * measureDuration;
     for (let s = 0; s < NUM_STEPS; s++) {
@@ -1884,43 +1910,27 @@ async function renderSlotToWav(snap) {
           env.connect(lp); lp.connect(offDest);
 
         } else if (key === 'sstring') {
-          // Match playStringSynth exactly
+          // Use shared rev/hp nodes (created once per track above)
           const vol = isAccent ? 0.027 : 0.018;
           const env = o.createGain();
-          const irLen = Math.floor(sampleRate*0.4);
-          const irBuf = o.createBuffer(2,irLen,sampleRate);
-          for (let ch=0;ch<2;ch++){const d=irBuf.getChannelData(ch); for(let i=0;i<irLen;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/irLen,1.2);}
-          const rev = o.createConvolver(); rev.buffer=irBuf;
-          const dryG = o.createGain(); dryG.gain.value=0.5;
-          const revG = o.createGain(); revG.gain.value=0.5;
-          const hp = o.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=400; hp.Q.value=0.7;
           [0,7,-7,12,-3].forEach(det => {
             const osc = o.createOscillator(); osc.type='sawtooth'; osc.frequency.value=freq; osc.detune.value=det;
             osc.connect(env); osc.start(t); osc.stop(t+dur+0.4);
           });
-          env.connect(hp); hp.connect(dryG); dryG.connect(offDest);
-          hp.connect(rev); rev.connect(revG); revG.connect(offDest);
+          env.connect(sstringHP); env.connect(sstringRev);
           env.gain.setValueAtTime(0,t); env.gain.linearRampToValueAtTime(vol,t+0.08);
           env.gain.setValueAtTime(vol*3,t+dur-0.1); env.gain.exponentialRampToValueAtTime(0.001,t+dur+0.3);
 
         } else if (key === 'sleg') {
-          // Match playSynthLeg exactly
+          // Use shared rev/hp nodes (created once per track above)
           const vol = isAccent ? 0.055 : 0.038;
           const glide = Math.min(0.1,dur*0.2);
           const strEnv = o.createGain();
-          const irLen = Math.floor(sampleRate*0.5);
-          const irBuf = o.createBuffer(2,irLen,sampleRate);
-          for (let ch=0;ch<2;ch++){const d=irBuf.getChannelData(ch); for(let i=0;i<irLen;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/irLen,1.5);}
-          const rev = o.createConvolver(); rev.buffer=irBuf;
-          const hp = o.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=500; hp.Q.value=0.7;
-          const dryG = o.createGain(); dryG.gain.value=0.5;
-          const revG = o.createGain(); revG.gain.value=0.5;
           [0,6,-6,11].forEach(det => {
             const osc = o.createOscillator(); osc.type='sawtooth'; osc.frequency.value=freq; osc.detune.value=det;
             osc.connect(strEnv); osc.start(t); osc.stop(t+dur+0.4);
           });
-          strEnv.connect(hp); hp.connect(dryG); dryG.connect(offDest);
-          hp.connect(rev); rev.connect(revG); revG.connect(offDest);
+          strEnv.connect(slegHP); strEnv.connect(slegRev);
           strEnv.gain.setValueAtTime(0,t); strEnv.gain.linearRampToValueAtTime(vol,t+0.07);
           strEnv.gain.setValueAtTime(vol*2.5,t+dur-0.08); strEnv.gain.exponentialRampToValueAtTime(0.001,t+dur+0.25);
           const leadEnv = o.createGain();
