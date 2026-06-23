@@ -1741,7 +1741,7 @@ function clearAll() {
 async function renderSlotToWav(snap) {
   const slotBpm = snap.bpm || bpm;
   const sampleRate = ctx.sampleRate;
-  const NUM_MEASURES = 16;
+  const NUM_MEASURES = 2;
   const measureDuration = (60 / slotBpm) * NUM_STEPS / 4;
   const totalDuration = measureDuration * NUM_MEASURES;
   const offline = new OfflineAudioContext(2, Math.ceil(sampleRate * totalDuration), sampleRate);
