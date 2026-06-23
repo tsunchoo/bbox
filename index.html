@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>BOOMBLAP v13</title>
+<title>BOOMBLAP v14</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
 :root {
@@ -2479,40 +2479,45 @@ function randAll(mode) {
 }
 
 // RAND button wiring
+// On iOS, touchend fires during long-press before we can detect hold duration.
+// So: tap = single randAll. Hold = user must tap again to stop auto-mode.
 (function() {
   const btn = document.getElementById('randBtn');
   if (!btn) return;
-  let holdTimer = null, didHold = false, autoRandInterval = null;
+  let autoRandInterval = null;
 
-  const onDown = () => {
-    didHold = false;
-    holdTimer = setTimeout(() => {
-      didHold = true;
-      btn.classList.add('pulsing');
-      randAll();
-      autoRandInterval = setInterval(() => { randAll(); }, 4 * (60 / bpm) * 1000);
-    }, 600);
+  const stopAuto = () => {
+    if (autoRandInterval) {
+      clearInterval(autoRandInterval); autoRandInterval = null;
+      btn.classList.remove('pulsing');
+    }
   };
 
-  const onUp = () => {
-    if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
-    if (!didHold) { flashBtn('randBtn'); randAll(); }
-    else if (autoRandInterval) { clearInterval(autoRandInterval); autoRandInterval = null; btn.classList.remove('pulsing'); }
-    didHold = false;
+  const startAuto = () => {
+    if (autoRandInterval) { stopAuto(); return; } // second tap stops it
+    btn.classList.add('pulsing');
+    randAll();
+    autoRandInterval = setInterval(() => { randAll(); }, 4 * (60 / bpm) * 1000);
   };
 
-  btn.addEventListener('mousedown', onDown);
-  btn.addEventListener('mouseup', onUp);
-  btn.addEventListener('mouseleave', () => {
-    clearTimeout(holdTimer); holdTimer = null; didHold = false;
-    if (autoRandInterval) { clearInterval(autoRandInterval); autoRandInterval = null; btn.classList.remove('pulsing'); }
-  });
-  btn.addEventListener('touchstart', e => { e.preventDefault(); onDown(); }, { passive: false });
-  btn.addEventListener('touchend', e => { e.preventDefault(); onUp(); }, { passive: false });
-  btn.addEventListener('touchcancel', () => {
-    clearTimeout(holdTimer); holdTimer = null; didHold = false;
-    if (autoRandInterval) { clearInterval(autoRandInterval); autoRandInterval = null; btn.classList.remove('pulsing'); }
-  });
+  // Single tap = one rand. Double tap = start/stop auto mode.
+  let lastTap = 0;
+  const onTap = () => {
+    const now = Date.now();
+    if (now - lastTap < 400) {
+      // Double tap — toggle auto mode
+      startAuto();
+    } else {
+      // Single tap — one rand
+      if (autoRandInterval) { stopAuto(); }
+      else { flashBtn('randBtn'); randAll(); }
+    }
+    lastTap = now;
+  };
+
+  btn.addEventListener('touchstart', e => { e.preventDefault(); }, { passive: false });
+  btn.addEventListener('touchend', e => { e.preventDefault(); onTap(); }, { passive: false });
+  btn.addEventListener('click', onTap);
 })();
 
 const NUM_SLOTS = 6, slots = new Array(NUM_SLOTS).fill(null);
