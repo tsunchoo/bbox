@@ -424,7 +424,6 @@ const INSTRUMENTS = {
   bongHi: { name: 'BONGO HI',    soft: 'Sounds/BongHi50.wav', accent: 'Sounds/BongHi100.wav', group: 'perc' },
   bongLo: { name: 'BONGO LO',    soft: 'Sounds/BongLo50.wav', accent: 'Sounds/BongLo100.wav', group: 'perc' },
   ngate:  { name: 'NOISE',       soft: null, accent: null, group: 'perc'  },
-  guiro:  { name: 'GUIRO',       soft: null, accent: null, group: 'perc'  },
   cowb:   { name: 'COWBELL',     soft: 'Sounds/Cowb50.wav',   accent: 'Sounds/Cowb100.wav',   group: 'perc' },
   sbass:  { name: 'SYNTH BASS',  soft: null, accent: null, group: 'tonal' },
   sbass3: { name: 'JAMES BASS',  soft: null, accent: null, group: 'tonal' },
@@ -547,7 +546,6 @@ function playBuffer(key, isAccent, time, tr) {
   if (key === 'shihat') { playSynthHihat(isAccent, time, tr); return; }
   if (key === 'sbass')   { return; } // handled in scheduler with legato duration
   if (key === 'ngate')   { return; } // handled in scheduler
-  if (key === 'guiro')   { return; } // handled in scheduler
   if (key === 'sbass3')  { return; }
   if (key === 'sbass4')  { return; }
   if (key === 'stab')    { return; }
@@ -717,8 +715,6 @@ function scheduler() {
         } else if (key === 'ngate') {
           // Noise gate triggered by its own grid notes
           triggerNoiseGate(tr, val === 2, t);
-        } else if (key === 'guiro') {
-          playGuiro(val === 2, t, tr);
         } else {
           playBuffer(key, val === 2, t, tr);
           // If any other track has ngate, trigger it from this hit
@@ -1212,42 +1208,6 @@ function playRhodes(freq, durSec, isAccent, time, tr) {
 const _noiseGateNodes = {};
 
 // ── Guiro: scraped gourd — pitched ridge clicks with woody resonance ──
-function playGuiro(isAccent, time, tr) {
-  if (!ctx) return;
-  const dest = (tr !== undefined && trackGainNodes[tr]) ? trackGainNodes[tr] : masterGain;
-  const dur = stepDuration() * (isAccent ? 0.85 : 0.5);
-  const ridges = isAccent ? 10 : 6;
-  const vel = isAccent ? 0.5 : 0.3;
-  // Guiro has a characteristic pitch from the gourd body — typically 200-400Hz
-  const bodyFreq = 220 + Math.random() * 120;
-
-  for (let r = 0; r < ridges; r++) {
-    const rt = time + (r / ridges) * dur;
-    // Each ridge = brief sine burst (the pitch) + click (the stick)
-    // Sine body
-    const osc = ctx.createOscillator(); osc.type = 'sine';
-    osc.frequency.value = bodyFreq * (1 + r * 0.01); // slight glide up across scrape
-    const oscEnv = ctx.createGain();
-    const rimVel = vel * (0.8 + Math.random() * 0.4) * (1 - r / ridges * 0.2);
-    oscEnv.gain.setValueAtTime(0, rt);
-    oscEnv.gain.linearRampToValueAtTime(rimVel * 0.6, rt + 0.003);
-    oscEnv.gain.exponentialRampToValueAtTime(0.0001, rt + 0.025);
-    osc.connect(oscEnv); oscEnv.connect(dest);
-    osc.start(rt); osc.stop(rt + 0.03);
-
-    // Click transient — high frequency attack
-    const clickLen = 0.006;
-    const cBuf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * clickLen), ctx.sampleRate);
-    const cd = cBuf.getChannelData(0);
-    for (let i = 0; i < cd.length; i++) cd[i] = (Math.random()*2-1) * (1 - i/cd.length);
-    const cSrc = ctx.createBufferSource(); cSrc.buffer = cBuf;
-    const cHP = ctx.createBiquadFilter(); cHP.type = 'highpass'; cHP.frequency.value = 2000;
-    const cEnv = ctx.createGain(); cEnv.gain.value = rimVel * 0.4;
-    cSrc.connect(cHP); cHP.connect(cEnv); cEnv.connect(dest);
-    cSrc.start(rt);
-  }
-}
-
 function initNoiseGate(tr) {
   if (!ctx) return;
   if (_noiseGateNodes[tr]) { try { _noiseGateNodes[tr].src.stop(); } catch(e) {} }
@@ -2686,7 +2646,7 @@ function randAll(mode) {
   const tonalKeys = Object.keys(INSTRUMENTS).filter(k => TONAL_KEYS.has(k));
   const allKeys = Object.keys(INSTRUMENTS);
 
-  const soloPercKeys = new Set(['tamb','shak','cowb','ngate','clap','guiro']); // max one of these
+  const soloPercKeys = new Set(['tamb','shak','cowb','ngate','clap']); // max one of these
 
   function buildPool(keys) {
     const shuffled = [...keys].sort(() => Math.random() - 0.5);
@@ -3380,6 +3340,13 @@ function startScratch() {
   noise.connect(ws); ws.connect(bp); bp.connect(hp); hp.connect(ampEnv); ampEnv.connect(masterGain);
   noise.start();
   _scratchNodes = { noise, bp, hp, ampEnv };
+  // Auto-reset after envelope completes so button works again
+  setTimeout(() => {
+    _scratchActive = false;
+    _scratchNodes = null;
+    document.getElementById('scratchBtn').classList.remove('active');
+    try { noise.stop(); } catch(e) {}
+  }, (dur + 0.05) * 1000);
 }
 
 function stopScratch() {
