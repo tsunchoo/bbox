@@ -1009,7 +1009,7 @@ function randomizeBassTrack(tr, level) {
   // Per-instrument note density rules
   const noteTables = {
     sstring: [[1,2,0.10],[2,3,0.20],[2,5,0.30]],   // Choir — fewest
-    sleg:    [[1,2,0.10],[2,3,0.20],[2,5,0.30]],   // Strings+ — fewest
+    sleg:    [[1,2,0.10],[2,3,0.20],[2,5,0.30]],   // Strings — fewest
     rhodes:  [[2,3,0.15],[3,6,0.30],[5,8,0.45]],   // Piano — medium
     rhodes2: [[2,3,0.15],[3,6,0.30],[5,8,0.45]],   // Rhodes — medium
   };
@@ -1079,54 +1079,63 @@ function playStringSynth(freq, durSec, isAccent, time, tr) {
   env.connect(dryG); env.connect(rev);
 }
 
-// ── Synth Leg: detuned strings layer + square lead with legato glide ──
+// ── Strings: natural bowed string feel with strong attack and warm body ──
 const _slegGlide = {};
 function playSynthLeg(freq, durSec, isAccent, time, tr) {
   if (!ctx || !freq) return;
   const dest = getSynthConnectNode(tr);
-  const vol = isAccent ? 0.035 : 0.024;
-  const prevFreq = _slegGlide[tr] || freq;
-  _slegGlide[tr] = freq;
-  const glide = Math.min(0.1, durSec * 0.2);
+  const vol = isAccent ? 0.042 : 0.028;
 
-  // ── String layer: 4 detuned saws through highpass + short reverb ──
+  // Bow pressure noise burst on attack — the natural string transient
+  const bowLen = Math.min(0.04, durSec * 0.15);
+  const bowBuf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * bowLen), ctx.sampleRate);
+  const bd = bowBuf.getChannelData(0);
+  for (let i = 0; i < bd.length; i++) bd[i] = (Math.random()*2-1) * Math.pow(1-i/bd.length, 0.5);
+  const bow = ctx.createBufferSource(); bow.buffer = bowBuf;
+  const bowBP = ctx.createBiquadFilter(); bowBP.type = 'bandpass';
+  bowBP.frequency.value = freq * 2; bowBP.Q.value = 2;
+  const bowEnv = ctx.createGain();
+  bowEnv.gain.setValueAtTime(vol * 1.8, time);
+  bowEnv.gain.exponentialRampToValueAtTime(0.0001, time + bowLen);
+  bow.connect(bowBP); bowBP.connect(bowEnv); bowEnv.connect(dest);
+  bow.start(time);
+
+  // Main string body: detuned saws — warm, slightly spread
   const strEnv = ctx.createGain();
-  const irLen = Math.floor(ctx.sampleRate * 0.5);
+  // Bright attack then warm sustain via LP sweep
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 1.2;
+  lp.frequency.setValueAtTime(freq * 8, time);
+  lp.frequency.exponentialRampToValueAtTime(freq * 3, time + 0.06);
+  lp.frequency.exponentialRampToValueAtTime(freq * 2, time + durSec * 0.4);
+
+  const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 180; hp.Q.value = 0.5;
+
+  // Short room reverb
+  const irLen = Math.floor(ctx.sampleRate * 0.35);
   const irBuf = ctx.createBuffer(2, irLen, ctx.sampleRate);
   for (let ch = 0; ch < 2; ch++) {
     const d = irBuf.getChannelData(ch);
-    for (let i = 0; i < irLen; i++) d[i] = (Math.random()*2-1) * Math.pow(1-i/irLen, 1.5);
+    for (let i = 0; i < irLen; i++) d[i] = (Math.random()*2-1) * Math.pow(1-i/irLen, 2);
   }
   const rev = ctx.createConvolver(); rev.buffer = irBuf;
-  const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 500; hp.Q.value = 0.7;
-  const dryG = ctx.createGain(); dryG.gain.value = 0.5;
-  const revG = ctx.createGain(); revG.gain.value = 0.5;
-  [0, 6, -6, 11].forEach(det => {
-    const o = ctx.createOscillator(); o.type = 'sawtooth';
-    o.frequency.setValueAtTime(prevFreq, time);
-    o.frequency.exponentialRampToValueAtTime(freq, time + glide);
-    o.detune.value = det;
-    o.connect(strEnv); o.start(time); o.stop(time + durSec + 0.4);
-  });
-  strEnv.connect(hp); hp.connect(dryG); dryG.connect(dest);
-  hp.connect(rev); rev.connect(revG); revG.connect(dest);
-  strEnv.gain.setValueAtTime(0, time);
-  strEnv.gain.linearRampToValueAtTime(vol, time + 0.07);
-  strEnv.gain.setValueAtTime(vol * 2.5, time + durSec - 0.08);
-  strEnv.gain.exponentialRampToValueAtTime(0.001, time + durSec + 0.25);
+  const dryG = ctx.createGain(); dryG.gain.value = 0.65; dryG.connect(dest);
+  const revG = ctx.createGain(); revG.gain.value = 0.35; revG.connect(dest);
 
-  // ── Lead layer: square wave with glide, sharper envelope ──
-  const leadEnv = ctx.createGain();
-  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2200; lp.Q.value = 2.5;
-  const leadOsc = ctx.createOscillator(); leadOsc.type = 'square';
-  leadOsc.frequency.setValueAtTime(Math.max(prevFreq, 1), time);
-  leadOsc.frequency.exponentialRampToValueAtTime(Math.max(freq, 1), time + glide);
-  leadOsc.connect(lp); lp.connect(leadEnv); leadEnv.connect(dest);
-  leadEnv.gain.setValueAtTime(0, time);
-  leadEnv.gain.linearRampToValueAtTime(vol * 0.7, time + 0.005);
-  leadEnv.gain.setValueAtTime(vol * 0.7, time + durSec - 0.02);
-  leadEnv.gain.linearRampToValueAtTime(0, time + durSec + 0.01);
-  leadOsc.start(time); leadOsc.stop(time + durSec + 0.05);
+  // 5 detuned voices for ensemble width
+  [-8, -3, 0, 4, 9].forEach(det => {
+    const o = ctx.createOscillator(); o.type = 'sawtooth';
+    o.frequency.value = freq; o.detune.value = det;
+    o.connect(strEnv); o.start(time); o.stop(time + durSec + 0.3);
+  });
+
+  strEnv.connect(lp); lp.connect(hp);
+  hp.connect(dryG); hp.connect(rev); rev.connect(revG);
+
+  // Amplitude: strong fast attack (bowing), sustain, natural release
+  strEnv.gain.setValueAtTime(0, time);
+  strEnv.gain.linearRampToValueAtTime(vol, time + 0.018);   // fast bow attack
+  strEnv.gain.setValueAtTime(vol, time + durSec - 0.05);
+  strEnv.gain.exponentialRampToValueAtTime(0.0001, time + durSec + 0.15);
 }
 
 const _sparkleGlideState = {};
@@ -1261,7 +1270,7 @@ function triggerNoiseGate(tr, isAccent, time) {
   if (!ctx || !_noiseGateNodes[tr]) return;
   const { gate, filt } = _noiseGateNodes[tr];
   // Velocity variation: accent is louder and brighter with more randomness
-  const velBase = isAccent ? 0.7 : 0.3;
+  const velBase = isAccent ? 0.442 : 0.189;
   const vel = velBase * (0.75 + Math.random() * 0.5); // ±25% randomness
   const sweepStart = isAccent ? (2000 + Math.random() * 2000) : (600 + Math.random() * 800);
   const sweepEnd   = isAccent ? (100 + Math.random() * 200)  : (300 + Math.random() * 200);
@@ -2999,7 +3008,7 @@ function randomizeTrack(tr) {
   }
 
   // Cowbell, hihat, shaker, handclap: 30% chance of straight quarter or 8th note pattern
-  const straightKeys = new Set(['cowb','shihat','shak','clap']);
+  const straightKeys = new Set(['cowb','shihat','shak','clap','sleg']);
   if (straightKeys.has(key) && Math.random() < 0.3) {
     const isEighths = Math.random() < 0.5; // 50/50 quarters vs eighths
     const step = isEighths ? 2 : 4; // 8th = every 2 steps, quarter = every 4 steps
@@ -3327,22 +3336,22 @@ function startScratch() {
   const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 5;
   const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 200;
 
-  const eighth = (60 / bpm) / 2; // one 8th note duration
+  const twoBeats = (60 / bpm) * 2; // two beats duration
   const t = ctx.currentTime;
   // Start high (forward), pull back to low, return high — classic scratch shape
   const lo = 80, hi = 600;
   bp.frequency.setValueAtTime(hi, t);
-  bp.frequency.exponentialRampToValueAtTime(lo, t + eighth * 0.5);  // pull back
-  bp.frequency.exponentialRampToValueAtTime(hi, t + eighth);         // return
+  bp.frequency.exponentialRampToValueAtTime(lo, t + twoBeats * 0.5);  // pull back
+  bp.frequency.exponentialRampToValueAtTime(hi, t + twoBeats);         // return
 
-  // Amplitude: strong on out, dip on pull back, strong on return
+  // Amplitude: strong on out, dip on pull back, strong on return (+3dB = ×1.413)
   const ampEnv = ctx.createGain();
   ampEnv.gain.setValueAtTime(0, t);
-  ampEnv.gain.linearRampToValueAtTime(0.755, t + 0.01);
-  ampEnv.gain.setValueAtTime(0.755, t + eighth * 0.4);
-  ampEnv.gain.linearRampToValueAtTime(0.252, t + eighth * 0.55);
-  ampEnv.gain.linearRampToValueAtTime(0.693, t + eighth * 0.85);
-  ampEnv.gain.linearRampToValueAtTime(0, t + eighth + 0.02);
+  ampEnv.gain.linearRampToValueAtTime(1.067, t + 0.01);
+  ampEnv.gain.setValueAtTime(1.067, t + twoBeats * 0.4);
+  ampEnv.gain.linearRampToValueAtTime(0.356, t + twoBeats * 0.55);
+  ampEnv.gain.linearRampToValueAtTime(0.979, t + twoBeats * 0.85);
+  ampEnv.gain.linearRampToValueAtTime(0, t + twoBeats + 0.02);
 
   // Duck master output while scratching
   if (window._duckGain) {
@@ -3350,7 +3359,7 @@ function startScratch() {
     dg.cancelScheduledValues(t);
     dg.setValueAtTime(1, t);
     dg.linearRampToValueAtTime(0.5, t + 0.01);
-    dg.linearRampToValueAtTime(1, t + eighth + 0.05);
+    dg.linearRampToValueAtTime(1, t + twoBeats + 0.05);
   }
   noise.connect(bp); bp.connect(hp); hp.connect(ampEnv); ampEnv.connect(masterGain);
   noise.start();
@@ -3364,8 +3373,8 @@ function stopScratch() {
   const { noise, ampEnv } = _scratchNodes;
   ampEnv.gain.cancelScheduledValues(ctx.currentTime);
   ampEnv.gain.setValueAtTime(ampEnv.gain.value, ctx.currentTime);
-  ampEnv.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.08);
-  setTimeout(() => { try { noise.stop(); } catch(e) {} _scratchNodes = null; }, 150);
+  ampEnv.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.15);
+  setTimeout(() => { try { noise.stop(); } catch(e) {} _scratchNodes = null; }, 250);
 }
 
 // Wire SCRATCH button — hold=scratch, drag to RAND=trigger rand too
