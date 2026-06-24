@@ -1030,7 +1030,7 @@ function randomizeBassTrack(tr, level) {
 function playStringSynth(freq, durSec, isAccent, time, tr) {
   if (!ctx || !freq) return;
   const dest = getSynthConnectNode(tr);
-  const vol = isAccent ? 0.391 : 0.267;
+  const vol = isAccent ? 0.695 : 0.475;
 
   // Choir: formant-filtered sawtooth voices simulating vowel "aah"
   // Formants: F1~800Hz, F2~1200Hz, F3~2600Hz (open "ah" vowel)
@@ -2473,6 +2473,12 @@ function toggleRecord() {
     return;
   }
 
+  // If stopped and nothing in the grid, do nothing
+  if (!playing) {
+    const hasNotes = grid.some(row => row.some(v => v > 0));
+    if (!hasNotes) return;
+  }
+
   // Set up MediaRecorder
   try {
     const dest = ctx.createMediaStreamDestination();
@@ -2493,7 +2499,12 @@ function toggleRecord() {
       await shareOrDownload([file]);
     };
     _recArmed = true;
-    if (playing && _mediaRecorder.state === 'inactive') _mediaRecorder.start();
+    if (playing && _mediaRecorder.state === 'inactive') {
+      _mediaRecorder.start();
+    } else if (!playing) {
+      // Start playback which will auto-start recording
+      togglePlay();
+    }
     updateRecBtn();
   } catch(e) {
     alert('Record error: ' + e.message);
@@ -2935,6 +2946,8 @@ function placeNotes(tr, noteCount, accentRatio, level) {
   positions.forEach(p => { grid[tr][p] = accentSet.has(p) ? 2 : 1; });
 
   const key = trackInstruments[tr];
+  // Kick: never land on beat 1 (step 0) or beat 3 (step 8) — those belong to the BEAT
+  if (key === 'skick') { grid[tr][0] = 0; grid[tr][8] = 0; }
   const maxConsec = (key === 'skick' || key === 'ssnare' || key === 'clap' || key === 'cowb') ? 2 : (level === 2 ? 4 : 99);
   const maxAccentConsec = level === 2 ? 2 : 99;
 
@@ -3376,12 +3389,31 @@ function stopScratch() {
   const btn = document.getElementById('scratchBtn');
   if (!btn) return;
 
-  btn.addEventListener('touchstart', e => { e.preventDefault(); startScratch(); }, { passive: false });
-  btn.addEventListener('touchend', e => { e.preventDefault(); stopScratch(); }, { passive: false });
-  btn.addEventListener('touchcancel', () => stopScratch());
-  btn.addEventListener('mousedown', startScratch);
-  btn.addEventListener('mouseup', stopScratch);
-  btn.addEventListener('mouseleave', stopScratch);
+  let _scratchRepeat = null;
+
+  const doScratch = () => {
+    startScratch();
+  };
+
+  const onScratchDown = () => {
+    doScratch();
+    // Repeat scratch while held
+    _scratchRepeat = setInterval(() => {
+      if (!_scratchActive) doScratch();
+    }, ((60 / bpm) / 2 + 0.05) * 1000); // repeat after each scratch duration
+  };
+
+  const onScratchUp = () => {
+    clearInterval(_scratchRepeat); _scratchRepeat = null;
+    stopScratch();
+  };
+
+  btn.addEventListener('touchstart', e => { e.preventDefault(); onScratchDown(); }, { passive: false });
+  btn.addEventListener('touchend', e => { e.preventDefault(); onScratchUp(); }, { passive: false });
+  btn.addEventListener('touchcancel', onScratchUp);
+  btn.addEventListener('mousedown', onScratchDown);
+  btn.addEventListener('mouseup', onScratchUp);
+  btn.addEventListener('mouseleave', onScratchUp);
 
   // Drag from SCRATCH onto RAND to trigger it
   btn.addEventListener('touchmove', e => {
