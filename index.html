@@ -61,9 +61,9 @@ header .sub { font-size: 0.44rem; color: var(--dim); letter-spacing: 2px; text-t
   touch-action: manipulation;
 }
 .btn.active { background: var(--text); color: var(--bg); }
-#playBtn.playing { background: #111; color: #fff; }
-#playBtn.playing img { filter: invert(0) !important; animation: play-red-pulse 0.5s infinite alternate; }
-@keyframes play-red-pulse { from { filter: invert(0) brightness(1) sepia(1) saturate(10) hue-rotate(330deg); } to { filter: invert(0) brightness(0.5) sepia(1) saturate(10) hue-rotate(330deg); } }
+#playBtn.playing { background: #111; }
+#playBtn.playing img { animation: play-red-pulse 0.5s infinite alternate; }
+@keyframes play-red-pulse { from { filter: brightness(0) invert(1) sepia(1) saturate(20) hue-rotate(330deg) brightness(1.5); } to { filter: brightness(0) invert(1) sepia(1) saturate(20) hue-rotate(330deg) brightness(0.5); } }
 #playBtn.playing.btn-beat-pulse { animation: play-pulse 0.12s ease-out; }
 @keyframes play-pulse { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
 .btn:active { opacity: 0.7; }
@@ -71,11 +71,12 @@ header .sub { font-size: 0.44rem; color: var(--dim); letter-spacing: 2px; text-t
 #beatBtn.active { background: #111 !important; color: #fff !important; }
 #beatBtn.beat-pulse { animation: beat-red 0.5s infinite alternate; }
 @keyframes beat-red { from { background: #111; color: #fff; } to { background: #444; color: #fff; } }
-#saveBtn.rec-active { animation: rec-pulse 0.5s infinite alternate; background: var(--playhead) !important; color: #fff !important; }
+#saveBtn.rec-active { background: #555; }
+#saveBtn.rec-active img { animation: rec-icon-pulse 0.5s infinite alternate; }
 #saveBtn.rec-beat-pulse { animation: rec-pump 0.12s ease-out; }
 @keyframes rec-pump { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
 #saveBtn, #randBtn { touch-action: none; }
-@keyframes rec-pulse { from { background: var(--playhead) !important; color: #fff; } to { background: #7a1000 !important; color: #fff; } }
+@keyframes rec-icon-pulse { from { filter: brightness(0) invert(1) sepia(1) saturate(20) hue-rotate(330deg) brightness(1.5); } to { filter: brightness(0) invert(1) sepia(1) saturate(20) hue-rotate(330deg) brightness(0.5); } }
 .btn-flash { background: var(--slot-saved) !important; color: #000 !important; border: none !important; transition: none !important; }
 .rand-overlay-btn {
   font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 700;
@@ -3442,18 +3443,63 @@ let _hissNode = null, _hissGain = null, _hissOn = false;
 
 function startHiss() {
   if (!ctx || _hissNode) return;
-  const bufLen = ctx.sampleRate * 4;
-  const buf = ctx.createBuffer(2, bufLen, ctx.sampleRate);
+  const sr = ctx.sampleRate;
+
+  // ── Hiss: shaped white noise (pink-ish, high shelf) ──
+  const hissBuf = ctx.createBuffer(2, sr * 4, sr);
   for (let ch = 0; ch < 2; ch++) {
-    const d = buf.getChannelData(ch);
-    for (let i = 0; i < bufLen; i++) d[i] = (Math.random() * 2 - 1) * 0.5;
+    const d = hissBuf.getChannelData(ch);
+    let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+    for (let i = 0; i < d.length; i++) {
+      const w = Math.random() * 2 - 1;
+      // Paul Kellet pink noise approximation
+      b0=0.99886*b0+w*0.0555179; b1=0.99332*b1+w*0.0750759;
+      b2=0.96900*b2+w*0.1538520; b3=0.86650*b3+w*0.3104856;
+      b4=0.55000*b4+w*0.5329522; b5=-0.7616*b5-w*0.0168980;
+      d[i] = (b0+b1+b2+b3+b4+b5+b6+w*0.5362) * 0.11;
+      b6 = w * 0.115926;
+    }
   }
-  _hissNode = ctx.createBufferSource(); _hissNode.buffer = buf; _hissNode.loop = true;
-  const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 4000;
-  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 12000;
-  _hissGain = ctx.createGain(); _hissGain.gain.value = 0.013;
-  _hissNode.connect(hp); hp.connect(lp); lp.connect(_hissGain); _hissGain.connect(masterGain);
-  _hissNode.start();
+  _hissNode = ctx.createBufferSource(); _hissNode.buffer = hissBuf; _hissNode.loop = true;
+  const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 2000;
+  const peak = ctx.createBiquadFilter(); peak.type = 'peaking';
+  peak.frequency.value = 6000; peak.Q.value = 0.8; peak.gain.value = 6;
+  _hissGain = ctx.createGain(); _hissGain.gain.value = 0.018;
+  _hissNode.connect(hp); hp.connect(peak); peak.connect(_hissGain);
+
+  // ── Crackle: sparse random impulses ──
+  const crackleLen = sr * 8;
+  const crackBuf = ctx.createBuffer(2, crackleLen, sr);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = crackBuf.getChannelData(ch);
+    for (let i = 0; i < crackleLen; i++) {
+      // Sparse spikes — approx 40 per second
+      d[i] = Math.random() < (40 / sr) ? (Math.random() * 2 - 1) * (Math.random() < 0.3 ? 1 : 0.3) : 0;
+    }
+  }
+  const crackNode = ctx.createBufferSource(); crackNode.buffer = crackBuf; crackNode.loop = true;
+  const crackLP = ctx.createBiquadFilter(); crackLP.type = 'lowpass'; crackLP.frequency.value = 8000;
+  const crackGain = ctx.createGain(); crackGain.gain.value = 0.06;
+  crackNode.connect(crackLP); crackLP.connect(crackGain);
+
+  // ── Rumble: very low frequency wobble ──
+  const rumble = ctx.createOscillator(); rumble.type = 'sine'; rumble.frequency.value = 30;
+  const rumbleLFO = ctx.createOscillator(); rumbleLFO.type = 'sine'; rumbleLFO.frequency.value = 0.3;
+  const rumbleLFOGain = ctx.createGain(); rumbleLFOGain.gain.value = 5;
+  rumbleLFO.connect(rumbleLFOGain); rumbleLFOGain.connect(rumble.frequency);
+  const rumbleGain = ctx.createGain(); rumbleGain.gain.value = 0.008;
+  rumble.connect(rumbleGain);
+
+  // Mix all into _hissGain output
+  _hissGain.connect(masterGain);
+  crackGain.connect(masterGain);
+  rumbleGain.connect(masterGain);
+
+  _hissNode.start(); crackNode.start();
+  rumble.start(); rumbleLFO.start();
+
+  // Store all nodes for cleanup
+  _hissNode._extras = { crackNode, crackGain, rumble, rumbleLFO, rumbleGain };
 }
 
 function toggleHiss() {
@@ -3464,9 +3510,18 @@ function toggleHiss() {
     _hissOn = true;
     document.querySelectorAll('.reel-wrap').forEach(r => r.classList.add('hiss-on'));
   } else {
-    if (_hissGain) {
+    if (_hissGain && _hissNode) {
       _hissGain.gain.setTargetAtTime(0, ctx.currentTime, 0.1);
-      setTimeout(() => { try { _hissNode.stop(); } catch(e){} _hissNode = null; _hissGain = null; }, 500);
+      const extras = _hissNode._extras || {};
+      setTimeout(() => {
+        try { _hissNode.stop(); } catch(e){}
+        try { extras.crackNode && extras.crackNode.stop(); } catch(e){}
+        try { extras.rumble && extras.rumble.stop(); } catch(e){}
+        try { extras.rumbleLFO && extras.rumbleLFO.stop(); } catch(e){}
+        if (extras.crackGain) { extras.crackGain.gain.value = 0; }
+        if (extras.rumbleGain) { extras.rumbleGain.gain.value = 0; }
+        _hissNode = null; _hissGain = null;
+      }, 500);
     }
     _hissOn = false;
     document.querySelectorAll('.reel-wrap').forEach(r => r.classList.remove('hiss-on'));
