@@ -130,8 +130,8 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 .rand-btn.pulsing { color: #fff; animation: pulse 0.5s infinite alternate; }
 #randBtn.pulsing { background: #0468f4; color: #fff; animation: rand-pulse 0.5s infinite alternate; }
 @keyframes rand-pulse { from { background: #0468f4; color: #fff; } to { background: #0247a8; color: #fff; } }
-#clearBtn.active { background: #111 !important; color: #0468f4 !important; }
-#scratchBtn.active { background: #111 !important; color: #0468f4 !important; }
+#clearBtn.active { background: #0468f4 !important; color: #fff !important; }
+#scratchBtn.active { background: #0468f4 !important; color: #fff !important; }
 @keyframes pulse { from { background: var(--playhead); color: #fff; } to { background: #ff7755; color: #fff; } }
 .track-ctrl-icon-btn.playing { opacity: 0.45; }
 .shift-btn {
@@ -3345,7 +3345,7 @@ function startScratch() {
     const dg = window._duckGain.gain;
     dg.cancelScheduledValues(t);
     dg.setValueAtTime(1, t);
-    dg.linearRampToValueAtTime(0.2, t + 0.01);
+    dg.linearRampToValueAtTime(0.112, t + 0.01);
     dg.linearRampToValueAtTime(1, t + twoBeats + 0.05);
   }
   noise.connect(ws); ws.connect(bp); bp.connect(hp); hp.connect(ampEnv); ampEnv.connect(masterGain);
@@ -3474,7 +3474,7 @@ function startHiss() {
   const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 2000;
   const peak = ctx.createBiquadFilter(); peak.type = 'peaking';
   peak.frequency.value = 6000; peak.Q.value = 0.8; peak.gain.value = 6;
-  _hissGain = ctx.createGain(); _hissGain.gain.value = 0.018;
+  _hissGain = ctx.createGain(); _hissGain.gain.value = 0.0032;
   _hissNode.connect(hp); hp.connect(peak); peak.connect(_hissGain);
 
   // ── Crackle: sparse random impulses ──
@@ -3489,7 +3489,7 @@ function startHiss() {
   }
   const crackNode = ctx.createBufferSource(); crackNode.buffer = crackBuf; crackNode.loop = true;
   const crackLP = ctx.createBiquadFilter(); crackLP.type = 'lowpass'; crackLP.frequency.value = 8000;
-  const crackGain = ctx.createGain(); crackGain.gain.value = 0.06;
+  const crackGain = ctx.createGain(); crackGain.gain.value = 0.0107;
   crackNode.connect(crackLP); crackLP.connect(crackGain);
 
   // ── Rumble: very low frequency wobble ──
@@ -3497,7 +3497,7 @@ function startHiss() {
   const rumbleLFO = ctx.createOscillator(); rumbleLFO.type = 'sine'; rumbleLFO.frequency.value = 0.3;
   const rumbleLFOGain = ctx.createGain(); rumbleLFOGain.gain.value = 5;
   rumbleLFO.connect(rumbleLFOGain); rumbleLFOGain.connect(rumble.frequency);
-  const rumbleGain = ctx.createGain(); rumbleGain.gain.value = 0.008;
+  const rumbleGain = ctx.createGain(); rumbleGain.gain.value = 0.0014;
   rumble.connect(rumbleGain);
 
   // Connect noise directly to destination (bypasses master limiter)
