@@ -2703,7 +2703,7 @@ function randAll(mode) {
     if (sb) { const tonal = TONAL_KEYS.has(k); sb.textContent = tonal ? 'E' : 'S'; }
     trackRLevel[tr] = level;
     randomizeTrack(tr);
-    trackVolume[tr] = 0.5;
+    trackVolume[tr] = (pool[tr] === 'skick') ? 0.35 : 0.5;
     // Reset FX to off first — setFxActive will apply -6dB if FX gets turned on
     trackFx[tr] = { x: 0, y: 0 };
     if (ctx && trackFxNodes[tr]) setFxActive(tr, { x: 0, y: 0 });
