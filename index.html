@@ -43,6 +43,7 @@ header .sub { font-size: 0.44rem; color: var(--dim); letter-spacing: 2px; text-t
 .reel-wrap.spinning .reel { filter: brightness(0); }
 .reel-wrap { position: relative; display: inline-block; }
 .reel-wrap.recording .reel { filter: brightness(0) saturate(100%) invert(16%) sepia(90%) saturate(7000%) hue-rotate(355deg) brightness(100%) !important; }
+.reel-wrap.hiss-on .reel { filter: brightness(0) sepia(1) saturate(3) hue-rotate(40deg) brightness(1.2); }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .reel-wrap.spinning { animation: spin 2s linear infinite; transform-origin: center; }
 .transport {
@@ -61,6 +62,8 @@ header .sub { font-size: 0.44rem; color: var(--dim); letter-spacing: 2px; text-t
 }
 .btn.active { background: var(--text); color: var(--bg); }
 #playBtn.playing { background: #111; color: #fff; }
+#playBtn.playing img { filter: invert(0) !important; animation: play-red-pulse 0.5s infinite alternate; }
+@keyframes play-red-pulse { from { filter: invert(0) brightness(1) sepia(1) saturate(10) hue-rotate(330deg); } to { filter: invert(0) brightness(0.5) sepia(1) saturate(10) hue-rotate(330deg); } }
 #playBtn.playing.btn-beat-pulse { animation: play-pulse 0.12s ease-out; }
 @keyframes play-pulse { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
 .btn:active { opacity: 0.7; }
@@ -558,7 +561,7 @@ function playBuffer(key, isAccent, time, tr) {
 
   const src = ctx.createBufferSource(); src.buffer = buf;
   const instrumentGain = ctx.createGain();
-  instrumentGain.gain.value = (key === 'shak') ? 0.5 : (key === 'clap') ? 0.561 : (key === 'tamb') ? 0.794 : (key === 'congHi' || key === 'congLo' || key === 'bongHi' || key === 'bongLo') ? 0.631 : 1.0;
+  instrumentGain.gain.value = (key === 'shak') ? 0.5 : (key === 'clap') ? 0.354 : (key === 'tamb') ? 0.794 : (key === 'cowb') ? 0.631 : (key === 'congHi' || key === 'congLo' || key === 'bongHi' || key === 'bongLo') ? 0.631 : 1.0;
   // S: reverse sweep — play sample reversed leading into note
   if (tr !== undefined && trackSweep[tr] && buf) {
     const revLen = Math.min(buf.duration, stepDuration() * 2);
@@ -2471,6 +2474,8 @@ function updateRecBtn() {
 }
 
 
+const BAR_COLORS = ['#ffe033', '#ffd6a5', '#ffadad', '#ffc6ff', '#caffbf', '#9bf6ff', '#a0c4ff', '#fdffb6', '#f8c8c8', '#d4f1f4', '#f9e4b7', '#e8f5e9', '#fce4ec', '#f3e5f5', '#e8eaf6', '#e0f7fa', '#f1f8e9', '#fff8e1', '#fbe9e7', '#f9fbe7', '#fffde7', '#f0f4c3', '#dcedc8', '#c8e6c9', '#b2dfdb', '#b2ebf2', '#ffe0b2', '#ffccbc', '#f8bbd0', '#e1bee7', '#d1c4e9', '#c5cae9', '#e3f2fd', '#e8f5e9', '#fff9c4', '#fce4ec', '#f3e5f5', '#e8eaf6'];
+let _currentBarColor = "#ffe033";
 const SPECIES_NAMES = ['mercury', 'venus', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'phobos', 'deimos', 'io', 'europa', 'ganymede', 'callisto', 'amalthea', 'himalia', 'titan', 'enceladus', 'mimas', 'dione', 'rhea', 'tethys', 'hyperion', 'iapetus', 'phoebe', 'titania', 'oberon', 'umbriel', 'ariel', 'miranda', 'puck', 'caliban', 'sycorax', 'triton', 'nereid', 'proteus', 'larissa', 'galatea', 'despina', 'thalassa', 'charon', 'nix', 'hydra', 'kerberos', 'styx', 'ceres', 'pluto', 'eris', 'makemake', 'haumea', 'sedna', 'orcus', 'quaoar', 'ixion', 'pallas', 'vesta', 'hygiea', 'juno', 'psyche', 'davida', 'sylvia', 'interamnia', 'bamberga', 'herculina', 'euphrosyne', 'doris', 'themis', 'cybele', 'camilla', 'halley', 'encke', 'tempel', 'hartley', 'churyumov', 'biela', 'arend', 'bennett', 'bradfield', 'hale', 'bopp', 'hyakutake', 'ikeya', 'seki', 'lovejoy', 'neowise', 'sirius', 'canopus', 'rigel', 'vega', 'capella', 'arcturus', 'aldebaran', 'spica', 'antares', 'fomalhaut', 'deneb', 'regulus', 'altair', 'betelgeuse', 'pollux', 'castor', 'procyon', 'achernar', 'acrux', 'mimosa', 'hadar', 'mizar', 'alioth', 'alcor', 'dubhe', 'merak', 'phecda', 'megrez', 'alnitak', 'alnilam', 'mintaka', 'saiph', 'bellatrix', 'alderamin', 'alpheratz', 'schedar', 'caph', 'ruchbah', 'segin', 'enif', 'sadalsuud', 'sadalmelik', 'sadachbia', 'sadalbari', 'ancha', 'shaula', 'lesath', 'alniyat', 'graffias', 'dschubba', 'fang', 'pi', 'rho', 'zubenelgenubi', 'zubeneschamali', 'zubenelhakrabi', 'andromeda', 'triangulum', 'centaurus', 'sculptor', 'fornax', 'tucana', 'carina', 'orion', 'helix', 'crab', 'ring', 'eagle', 'lagoon', 'trifid', 'rosette', 'omega', 'dumbell', 'blinking', 'eskimo', 'cat', 'owl', 'boomerang', 'hourglass', 'red', 'spider', 'butterfly', 'stingray', 'cassiopeia', 'cygnus', 'lyra', 'aquila', 'serpens', 'ophiuchus', 'hercules', 'bootes', 'corona', 'virgo', 'libra', 'scorpius', 'sagittarius', 'capricornus', 'aquarius', 'pisces', 'aries', 'taurus', 'gemini', 'cancer', 'leo', 'draco', 'ursa', 'lupus', 'ara', 'pavo', 'grus', 'phoenix', 'hydrus', 'reticulum', 'pictor', 'columba', 'lepus', 'eridanus']
 function getSpeciesName() {
   return SPECIES_NAMES[Math.floor(Math.random() * SPECIES_NAMES.length)];
@@ -2771,6 +2776,9 @@ function randAll(mode) {
   }
 
   _currentSpecies = getSpeciesName();
+  _currentBarColor = BAR_COLORS[Math.floor(Math.random() * BAR_COLORS.length)];
+  const barEl = document.querySelector('#nameDisplay').parentElement;
+  if (barEl) barEl.style.background = _currentBarColor;
   // Update key/scale display
   const nd = document.getElementById('nameDisplay'); if (nd) nd.textContent = (_currentSpecies || '');
   const kd = document.getElementById('keyDisplay');
@@ -3327,42 +3335,49 @@ function startScratch() {
   _scratchActive = true;
   document.getElementById('scratchBtn').classList.add('active');
 
-  // Single slow forward-back scratch motion
-  const bufLen = ctx.sampleRate * 3;
+  // Fast scratch — two 16th notes, crunchy
+  const dur = (60 / bpm) / 2;
+  const bufLen = ctx.sampleRate * 2;
   const buf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
   const d = buf.getChannelData(0);
   for (let i = 0; i < bufLen; i++) d[i] = Math.random() * 2 - 1;
   const noise = ctx.createBufferSource(); noise.buffer = buf; noise.loop = true;
 
-  const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 5;
-  const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 200;
+  // Waveshaper for crunch
+  const ws = ctx.createWaveShaper();
+  const wsCurve = new Float32Array(256);
+  for (let i = 0; i < 256; i++) { const x = (i*2)/256-1; wsCurve[i] = Math.tanh(x * 12); }
+  ws.curve = wsCurve;
 
-  const twoBeats = (60 / bpm) / 2; // two 16th notes duration
+  const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 8;
+  const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 300;
+
   const t = ctx.currentTime;
-  // Start high (forward), pull back to low, return high — classic scratch shape
-  const lo = 80, hi = 600;
+  const lo = 100, hi = 800;
   bp.frequency.setValueAtTime(hi, t);
-  bp.frequency.exponentialRampToValueAtTime(lo, t + twoBeats * 0.5);  // pull back
-  bp.frequency.exponentialRampToValueAtTime(hi, t + twoBeats);         // return
+  bp.frequency.exponentialRampToValueAtTime(lo, t + dur * 0.45);
+  bp.frequency.exponentialRampToValueAtTime(hi, t + dur);
 
-  // Amplitude: strong on out, dip on pull back, strong on return (+3dB = ×1.413)
+  // +3dB on top of previous (×1.413): 1.067→1.508, 0.356→0.503, 0.979→1.384
   const ampEnv = ctx.createGain();
   ampEnv.gain.setValueAtTime(0, t);
-  ampEnv.gain.linearRampToValueAtTime(1.067, t + 0.01);
-  ampEnv.gain.setValueAtTime(1.067, t + twoBeats * 0.4);
-  ampEnv.gain.linearRampToValueAtTime(0.356, t + twoBeats * 0.55);
-  ampEnv.gain.linearRampToValueAtTime(0.979, t + twoBeats * 0.85);
-  ampEnv.gain.linearRampToValueAtTime(0, t + twoBeats + 0.02);
+  ampEnv.gain.linearRampToValueAtTime(2.131, t + 0.005);
+  ampEnv.gain.setValueAtTime(2.131, t + dur * 0.35);
+  ampEnv.gain.linearRampToValueAtTime(0.711, t + dur * 0.5);
+  ampEnv.gain.linearRampToValueAtTime(1.956, t + dur * 0.82);
+  ampEnv.gain.linearRampToValueAtTime(0, t + dur + 0.015);
+
+  const twoBeats = dur; // alias for duck timing
 
   // Duck master output while scratching
   if (window._duckGain) {
     const dg = window._duckGain.gain;
     dg.cancelScheduledValues(t);
     dg.setValueAtTime(1, t);
-    dg.linearRampToValueAtTime(0.5, t + 0.01);
+    dg.linearRampToValueAtTime(0.2, t + 0.01);
     dg.linearRampToValueAtTime(1, t + twoBeats + 0.05);
   }
-  noise.connect(bp); bp.connect(hp); hp.connect(ampEnv); ampEnv.connect(masterGain);
+  noise.connect(ws); ws.connect(bp); bp.connect(hp); hp.connect(ampEnv); ampEnv.connect(masterGain);
   noise.start();
   _scratchNodes = { noise, bp, hp, ampEnv };
 }
@@ -3453,6 +3468,49 @@ function stopScratch() {
     applyKey();
   });
 })();
+
+
+// ── Tape hiss — toggled by tapping either reel ──
+let _hissNode = null, _hissGain = null, _hissOn = false;
+
+function startHiss() {
+  if (!ctx || _hissNode) return;
+  const bufLen = ctx.sampleRate * 4;
+  const buf = ctx.createBuffer(2, bufLen, ctx.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = buf.getChannelData(ch);
+    for (let i = 0; i < bufLen; i++) d[i] = (Math.random() * 2 - 1) * 0.5;
+  }
+  _hissNode = ctx.createBufferSource(); _hissNode.buffer = buf; _hissNode.loop = true;
+  const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 4000;
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 12000;
+  _hissGain = ctx.createGain(); _hissGain.gain.value = 0.04;
+  _hissNode.connect(hp); hp.connect(lp); lp.connect(_hissGain); _hissGain.connect(masterGain);
+  _hissNode.start();
+}
+
+function toggleHiss() {
+  if (!ctx) { ctx && ctx.resume(); return; }
+  ctx.resume();
+  if (!_hissOn) {
+    startHiss();
+    _hissOn = true;
+    document.querySelectorAll('.reel-wrap').forEach(r => r.classList.add('hiss-on'));
+  } else {
+    if (_hissGain) {
+      _hissGain.gain.setTargetAtTime(0, ctx.currentTime, 0.1);
+      setTimeout(() => { try { _hissNode.stop(); } catch(e){} _hissNode = null; _hissGain = null; }, 500);
+    }
+    _hissOn = false;
+    document.querySelectorAll('.reel-wrap').forEach(r => r.classList.remove('hiss-on'));
+  }
+}
+
+// Wire reel taps
+document.querySelectorAll('.reel-wrap').forEach(r => {
+  r.addEventListener('click', toggleHiss);
+  r.addEventListener('touchend', e => { e.preventDefault(); toggleHiss(); }, { passive: false });
+});
 
 </script>
 </body>
