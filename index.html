@@ -1233,7 +1233,7 @@ function triggerNoiseGate(tr, isAccent, time) {
   if (!ctx || !_noiseGateNodes[tr]) return;
   const { gate, filt } = _noiseGateNodes[tr];
   // Velocity variation: accent is louder and brighter with more randomness
-  const velBase = isAccent ? 0.442 : 0.189;
+  const velBase = isAccent ? 0.221 : 0.095;
   const vel = velBase * (0.75 + Math.random() * 0.5); // ±25% randomness
   const sweepStart = isAccent ? (2000 + Math.random() * 2000) : (600 + Math.random() * 800);
   const sweepEnd   = isAccent ? (100 + Math.random() * 200)  : (300 + Math.random() * 200);
