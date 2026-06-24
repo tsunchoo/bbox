@@ -3324,11 +3324,11 @@ function startScratch() {
   // +3dB on top of previous (×1.413): 1.067→1.508, 0.356→0.503, 0.979→1.384
   const ampEnv = ctx.createGain();
   ampEnv.gain.setValueAtTime(0, t);
-  ampEnv.gain.linearRampToValueAtTime(3.013, t + 0.005);
-  ampEnv.gain.setValueAtTime(3.013, t + dur * 0.35);
-  ampEnv.gain.linearRampToValueAtTime(1.005, t + dur * 0.5);
-  ampEnv.gain.linearRampToValueAtTime(2.765, t + dur * 0.82);
-  ampEnv.gain.setValueAtTime(0, t + dur);
+  ampEnv.gain.linearRampToValueAtTime(2.131, t + 0.005);
+  ampEnv.gain.setValueAtTime(2.131, t + dur * 0.35);
+  ampEnv.gain.linearRampToValueAtTime(0.711, t + dur * 0.5);
+  ampEnv.gain.linearRampToValueAtTime(1.956, t + dur * 0.82);
+  ampEnv.gain.linearRampToValueAtTime(0, t + dur + 0.015);
 
   const twoBeats = dur; // alias for duck timing
 
@@ -3337,8 +3337,8 @@ function startScratch() {
     const dg = window._duckGain.gain;
     dg.cancelScheduledValues(t);
     dg.setValueAtTime(1, t);
-    dg.linearRampToValueAtTime(0, t + 0.005);
-    dg.setValueAtTime(1, t + dur);
+    dg.linearRampToValueAtTime(0.2, t + 0.01);
+    dg.linearRampToValueAtTime(1, t + twoBeats + 0.05);
   }
   noise.connect(ws); ws.connect(bp); bp.connect(hp); hp.connect(ampEnv); ampEnv.connect(masterGain);
   noise.start();
