@@ -620,6 +620,8 @@ function scheduler() {
     // Fire pending auto-rand on downbeat
     if (step === 0 && _autoRandPending) {
       _autoRandPending = false;
+      const rb = document.getElementById('randBtn');
+      if (rb) rb.classList.remove('pulsing');
       randAll(_autoRandMode); _autoRandMode = undefined;
     }
     // Apply pending slot swap before audio is scheduled so step 0 plays from the new pattern
@@ -2489,8 +2491,10 @@ let _autoRandPending = false;
 function queueRand(mode) {
   if (playing) {
     _autoRandPending = true;
-    // Store mode for when it fires
     _autoRandMode = mode;
+    // Keep randBtn blue until pattern fires on downbeat
+    const rb = document.getElementById('randBtn');
+    if (rb) rb.classList.add('pulsing');
   } else {
     randAll(mode);
   }
