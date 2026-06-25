@@ -3356,35 +3356,38 @@ function startScratch() {
   flashBtnBlue('scratchBtn');
   document.getElementById('scratchBtn').classList.add('active');
 
+  if (!_scratchBuf) return;
+
   const t = ctx.currentTime;
-  const dur = _scratchBuf ? _scratchBuf.duration : (60 / bpm) / 2;
+  const src = ctx.createBufferSource();
+  src.buffer = _scratchBuf;
+  src.loop = true;
+  const gain = ctx.createGain(); gain.gain.value = 1.2;
+  src.connect(gain); gain.connect(masterGain);
+  src.start(t);
+  _scratchNodes = { src, gain };
 
-  if (_scratchBuf) {
-    const src = ctx.createBufferSource(); src.buffer = _scratchBuf;
-    const gain = ctx.createGain(); gain.gain.value = 1.2;
-    src.connect(gain); gain.connect(masterGain);
-    src.start(t);
-    _scratchNodes = { src, gain };
-  }
-
-  // Duck master output
   if (window._duckGain) {
     const dg = window._duckGain.gain;
     dg.cancelScheduledValues(t);
     dg.setValueAtTime(1, t);
     dg.linearRampToValueAtTime(0.112, t + 0.01);
-    dg.linearRampToValueAtTime(1, t + dur + 0.05);
   }
-
-  setTimeout(() => {
-    _scratchActive = false;
-    _scratchNodes = null;
-    document.getElementById('scratchBtn').classList.remove('active');
-  }, (dur + 0.05) * 1000);
 }
+
 function stopScratch() {
-  // Sample plays to completion — just allow repeat on next press
+  if (!_scratchActive || !_scratchNodes) return;
   _scratchActive = false;
+  document.getElementById('scratchBtn').classList.remove('active');
+  const { src, gain } = _scratchNodes;
+  gain.gain.setTargetAtTime(0, ctx.currentTime, 0.02);
+  setTimeout(() => { try { src.stop(); } catch(e){} }, 100);
+  _scratchNodes = null;
+  if (window._duckGain) {
+    const dg = window._duckGain.gain;
+    dg.cancelScheduledValues(ctx.currentTime);
+    dg.linearRampToValueAtTime(1, ctx.currentTime + 0.05);
+  }
 }
 
 // Wire SCRATCH button — hold=scratch, drag to RAND=trigger rand too
@@ -3392,24 +3395,8 @@ function stopScratch() {
   const btn = document.getElementById('scratchBtn');
   if (!btn) return;
 
-  let _scratchRepeat = null;
-
-  const doScratch = () => {
-    startScratch();
-  };
-
-  const onScratchDown = () => {
-    doScratch();
-    // Repeat scratch while held
-    _scratchRepeat = setInterval(() => {
-      if (!_scratchActive) doScratch();
-    }, ((60 / bpm) / 2 + 0.05) * 1000); // repeat after each scratch duration
-  };
-
-  const onScratchUp = () => {
-    clearInterval(_scratchRepeat); _scratchRepeat = null;
-    stopScratch();
-  };
+  const onScratchDown = () => { startScratch(); };
+  const onScratchUp = () => { stopScratch(); };
 
   btn.addEventListener('touchstart', e => { e.preventDefault(); onScratchDown(); }, { passive: false });
   btn.addEventListener('touchend', e => { e.preventDefault(); onScratchUp(); }, { passive: false });
