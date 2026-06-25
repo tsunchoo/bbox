@@ -14,12 +14,12 @@
   --vol-fill: #7ecf3a;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { overflow: hidden; height: 100dvh; max-height: 100dvh; }
+html, body { overflow: hidden; overflow-x: hidden; height: 100dvh; max-height: 100dvh; }
 button, .step-cell, .track-header-btn, .vol-mute-col, .fx-btn { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 body {
   background: var(--bg); color: var(--text);
   font-family: 'DM Sans', sans-serif;
-  height: 100dvh; max-height: 100dvh; overflow-y: hidden; display: flex; flex-direction: column; align-items: center;
+  height: 100dvh; max-height: 100dvh; overflow: hidden; display: flex; flex-direction: column; align-items: center;
   padding: 16px 4px 16px 4px; user-select: none; -webkit-user-select: none; box-sizing: border-box;
 }
 body::before {
@@ -68,9 +68,9 @@ header .sub { font-size: 0.44rem; color: var(--dim); letter-spacing: 2px; text-t
 @keyframes play-pulse { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
 .btn:active { opacity: 0.7; }
 
-#beatBtn.active { background: #111 !important; color: var(--playhead) !important; }
+#beatBtn.active { background: #111 !important; color: #ffe033 !important; }
 #beatBtn.beat-pulse { animation: beat-red 0.5s infinite alternate; }
-@keyframes beat-red { from { background: #111; color: var(--playhead); } to { background: #333; color: #7a1000; } }
+@keyframes beat-red { from { background: #111; color: #ffe033; } to { background: #333; color: #b8a000; } }
 #saveBtn.rec-active { background: #111; }
 #saveBtn.rec-active img { animation: rec-icon-pulse 0.5s infinite alternate; }
 #saveBtn.rec-beat-pulse { animation: rec-pump 0.12s ease-out; }
@@ -2686,9 +2686,24 @@ function randAll(mode) {
     return result;
   }
 
-  const pool = mode === 'perc' ? buildPool(percKeys)
-             : mode === 'tonal' ? buildPool(tonalKeys)
-             : buildPool(allKeys);
+  let pool;
+  if (mode === 'perc') {
+    pool = buildPool(percKeys);
+  } else if (mode === 'tonal') {
+    pool = buildPool(tonalKeys);
+  } else {
+    // Equal chance: pick 3 tonal and 3 perc, then shuffle
+    const tShuffle = [...tonalKeys].sort(() => Math.random() - 0.5);
+    const pShuffle = [...percKeys].sort(() => Math.random() - 0.5);
+    const tPool = buildPool(tShuffle.slice(0, Math.ceil(tonalKeys.length)));
+    const pPool = buildPool(pShuffle.slice(0, Math.ceil(percKeys.length)));
+    const mixed = [];
+    let ti = 0, pi = 0;
+    // Alternate tonal/perc, 3 each
+    for (let i = 0; i < 3 && ti < tPool.length; i++) mixed.push(tPool[ti++]);
+    for (let i = 0; i < 3 && pi < pPool.length; i++) mixed.push(pPool[pi++]);
+    pool = mixed.sort(() => Math.random() - 0.5);
+  }
 
   for (let tr = 0; tr < NUM_TRACKS; tr++) {
     const k = pool[tr];
