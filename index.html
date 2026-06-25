@@ -766,6 +766,7 @@ function scheduler() {
 
 function updatePlayhead(step) {
   document.querySelectorAll('.step-cell').forEach(el => el.classList.remove('playing'));
+    if (window._duckGain) { window._duckGain.gain.cancelScheduledValues(ctx.currentTime); window._duckGain.gain.setValueAtTime(1, ctx.currentTime); }
   for (let tr = 0; tr < NUM_TRACKS; tr++) {
     const el = document.querySelector(`[data-track="${tr}"][data-step="${step}"]`);
     if (el) el.classList.add('playing');
@@ -807,6 +808,15 @@ function togglePlay() {
   const btn = document.getElementById('playBtn');
   if (playing) {
     currentStep = -1; nextStepTime = ctx.currentTime + 0.05;
+    // Reset duck gain in case it got stuck
+    if (window._duckGain) { window._duckGain.gain.cancelScheduledValues(ctx.currentTime); window._duckGain.gain.setValueAtTime(1, ctx.currentTime); }
+    // Ensure all tonal tracks with notes have a scale
+    for (let tr = 0; tr < NUM_TRACKS; tr++) {
+      if (TONAL_KEYS.has(trackInstruments[tr]) && grid[tr].some(v => v > 0) && !trackBassScale[tr]) {
+        const root = transposeRootToRange(globalScaleRoot || BASS_ROOTS[0], getRangeRoots(trackInstruments[tr]));
+        trackBassScale[tr] = buildScaleFromRoot(root);
+      }
+    }
     scheduleInterval = setInterval(scheduler, SCHEDULE_MS);
     btn.classList.add('playing'); const pbi=document.getElementById('playBtnImg'); if(pbi) pbi.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAWgAAAFoCAYAAAB65WHVAAAENElEQVR4nO3UsQ3AIADAMOj/P9MHujAgosq+IFPGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA2zdsBJ6211u0G4Lw55y9f9twOAOCbQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDRBk0QJRBA0QZNECUQQNEGTRAlEEDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwLYXypoF9ldPS50AAAAASUVORK5CYII=';
     updateBeatPulse();
@@ -823,11 +833,10 @@ function togglePlay() {
     updateBeatPulse();
     document.querySelectorAll('.reel-wrap').forEach(r => r.classList.remove('spinning'));
     // Stop and deactivate beat
-    beatPlaying = false; _beatPending = false;
-    const _bb = document.getElementById('beatBtn');
-    if (_bb) _bb.classList.remove('active');
-    updateBeatPulse();
+    // Beat stays armed when stop is pressed — will re-engage on next play
+    _beatPending = false;
     document.querySelectorAll('.step-cell').forEach(el => el.classList.remove('playing'));
+    if (window._duckGain) { window._duckGain.gain.cancelScheduledValues(ctx.currentTime); window._duckGain.gain.setValueAtTime(1, ctx.currentTime); }
     // Auto-stop recording after half-bar delay (to capture reverb tail)
     if (_recArmed && _mediaRecorder && _mediaRecorder.state === 'recording') {
       const tailMs = (stepDuration() * 8) * 1000; // half bar
@@ -1505,17 +1514,17 @@ function toggleBeat() {
     btn.classList.remove('active');
     updateBeatPulse();
   } else {
-    if (!playing) {
-      // Not playing — activate immediately and start play
+    if (playing) {
+      // Playing — queue for next downbeat
+      _beatPending = true;
+      btn.classList.add('active');
+      updateBeatPulse();
+    } else {
+      // Not playing — arm it, will activate when play starts
       beatPlaying = true;
       btn.classList.add('active');
       updateBeatPulse();
-      togglePlay();
-    } else {
-      // Playing — queue for next downbeat (step 0 or 8)
-      _beatPending = true;
-      btn.classList.add('active'); // show immediately as visual feedback
-      updateBeatPulse();
+      // Do NOT start playback automatically
     }
   }
 }
@@ -2502,8 +2511,14 @@ function toggleRecord() {
     if (playing && _mediaRecorder.state === 'inactive') {
       _mediaRecorder.start();
     } else if (!playing) {
-      // Start playback which will auto-start recording
+      // Start playback, then start recording after ctx is running
       togglePlay();
+      setTimeout(() => {
+        if (_recArmed && _mediaRecorder && _mediaRecorder.state === 'inactive') {
+          _mediaRecorder.start();
+          updateRecBtn();
+        }
+      }, 80);
     }
     updateRecBtn();
   } catch(e) {
