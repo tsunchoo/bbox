@@ -3141,10 +3141,8 @@ function wireShiftButton(btn, tr, dir) {
   };
 
   const onDown = () => {
-    console.log('shift pointerdown');
     didHold = false;
     holdTimer = setTimeout(() => {
-      console.log('shift hold fired');
       didHold = true;
       btn.classList.add('pulsing');
       doShift();
@@ -3154,10 +3152,8 @@ function wireShiftButton(btn, tr, dir) {
   };
 
   const onUp = () => {
-    console.log('shift pointerup didHold=', didHold, 'holdTimer=', holdTimer);
-    if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
-    if (!didHold) doShift();
-    else stopAuto();
+    if (holdTimer !== null) { clearTimeout(holdTimer); holdTimer = null; doShift(); return; }
+    if (didHold) stopAuto();
     didHold = false;
   };
 
@@ -3201,9 +3197,8 @@ function wireRandomizeButton(btn, tr) {
   };
 
   const onUp = () => {
-    if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
-    if (!didHold) doRandomize();   // tap = randomize once
-    else stopAuto();                // release after hold = stop auto
+    if (holdTimer !== null) { clearTimeout(holdTimer); holdTimer = null; doRandomize(); return; }
+    if (didHold) stopAuto();
     didHold = false;
   };
 
