@@ -1040,7 +1040,7 @@ function randomizeBassTrack(tr, level) {
 function playStringSynth(freq, durSec, isAccent, time, tr) {
   if (!ctx || !freq) return;
   const dest = getSynthConnectNode(tr);
-  const vol = isAccent ? 0.695 : 0.475;
+  const vol = isAccent ? 1.236 : 0.845;
 
   // Choir: formant-filtered sawtooth voices simulating vowel "aah"
   // Formants: F1~800Hz, F2~1200Hz, F3~2600Hz (open "ah" vowel)
