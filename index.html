@@ -158,7 +158,6 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 }
 .track-vol-bar.muted { background: #ccc; }
 .track-vol-bar.muted .track-vol-fill { background: transparent; }
-.row-muted .track-ctrl-icon-btn,
 .row-muted .shift-btn.pulsing { background: #0468f4 !important; color: #fff !important; }
 .shift-btn {
   touch-action: none !important;
@@ -1479,10 +1478,9 @@ function playMetronome(t, isAccent) {
 
 // ── Power Guitar: 8-bit Nintendo power chord ──
 function playPwrGuitar(freq, durSec, isAccent, time, tr) {
-  console.log("playPwrGuitar", freq, durSec, tr, !!ctx, !!dest);
   if (!ctx || !freq) return;
   const dest = getSynthConnectNode(tr);
-  console.log("dest=", dest);
+  console.log("playPwrGuitar", freq, durSec, tr, !!dest);
   const vel = isAccent ? 0.38 : 0.26;
 
   // Power chord = root + fifth + octave
