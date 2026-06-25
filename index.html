@@ -434,6 +434,7 @@ const INSTRUMENTS = {
   sbass3: { name: 'JAMES BASS',  soft: null, accent: null, group: 'tonal' },
   sbass4: { name: 'PUNK BASS',   soft: null, accent: null, group: 'tonal' },
   stab:   { name: 'STAB',        soft: null, accent: null, group: 'tonal' },
+  pguit:  { name: 'PWR GUITAR',  soft: null, accent: null, group: 'tonal' },
   sstring:{ name: 'CHOIR',       soft: null, accent: null, group: 'tonal' },
   sleg:   { name: 'STRINGS+',    soft: null, accent: null, group: 'tonal' },
   sparkle:{ name: 'MUTED STR',   soft: null, accent: null, group: 'tonal' },
@@ -559,12 +560,13 @@ function playBuffer(key, isAccent, time, tr) {
   if (key === 'sparkle') { return; } // handled in scheduler
   if (key === 'rhodes')  { return; } // handled in scheduler
   if (key === 'rhodes2')  { return; }
+  if (key === 'pguit')    { return; }
   const buf = buffers[key]?.[isAccent ? 'accent' : 'soft'];
   if (!buf) return;
 
   const src = ctx.createBufferSource(); src.buffer = buf;
   const instrumentGain = ctx.createGain();
-  instrumentGain.gain.value = (key === 'shak') ? 0.5 : (key === 'clap') ? 0.354 : (key === 'tamb') ? 0.794 : (key === 'cowb') ? 0.631 : (key === 'guiro') ? 0.631 : (key === 'congHi' || key === 'congLo' || key === 'bongHi' || key === 'bongLo') ? 0.631 : 1.0;
+  instrumentGain.gain.value = (key === 'shak') ? 0.5 : (key === 'clap') ? 0.354 : (key === 'tamb') ? 0.794 : (key === 'cowb') ? 0.631 : (key === 'guiro') ? 0.501 : (key === 'congHi' || key === 'congLo' || key === 'bongHi' || key === 'bongLo') ? 0.631 : 1.0;
   // S: reverse sweep — play sample reversed leading into note
   if (tr !== undefined && trackSweep[tr] && buf) {
     const revLen = Math.min(buf.duration, stepDuration() * 2);
@@ -705,6 +707,7 @@ function scheduler() {
           if (key === 'sparkle') playSparkle(freq, dur, val === 2, t, tr);
           if (key === 'rhodes')  playRhodes(freq, dur, val === 2, t, tr);
           if (key === 'rhodes2') playRhodes2(freq, dur, val === 2, t, tr);
+          if (key === 'pguit')   playPwrGuitar(freq, dur, val === 2, t, tr);
           // E: filter envelope — bright open, sweep closed over note duration
           if (trackChop[tr] && trackEnvFilters[tr]) {
             const ef = trackEnvFilters[tr];
@@ -974,7 +977,7 @@ const trackBassScale = {}; // tr -> [freq, ...]
 
 // Global scale root — shared by all tonal tracks, cleared by CLEAR
 let globalScaleRoot = null;
-const TONAL_KEYS = new Set(['sbass','sbass3','sbass4','stab','sstring','sleg','sparkle','rhodes','rhodes2']);
+const TONAL_KEYS = new Set(['sbass','sbass3','sbass4','stab','sstring','sleg','sparkle','rhodes','rhodes2','pguit']);
 
 function buildScaleFromRoot(root) {
   const scale = [];
@@ -991,7 +994,7 @@ function transposeRootToRange(root, roots) {
 }
 function getRangeRoots(key) {
   if (key === 'sparkle') return SPARKLE_ROOTS;
-  if (key === 'sstring' || key === 'sleg' || key === 'rhodes' || key === 'rhodes2' || key === 'stab') return MELODY_ROOTS;
+  if (key === 'sstring' || key === 'sleg' || key === 'rhodes' || key === 'rhodes2' || key === 'stab' || key === 'pguit') return MELODY_ROOTS;
   return BASS_ROOTS;
 }
 
@@ -1372,7 +1375,7 @@ function playPlunkBass(freq, durSec, isAccent, time, tr) {
 function playStab(freq, durSec, isAccent, time, tr) {
   if (!ctx || !freq) return;
   const dest = getSynthConnectNode(tr);
-  const vel = isAccent ? 0.347 : 0.240;
+  const vel = isAccent ? 0.246 : 0.170;
 
   // 3-oscillator detuned stack — chord-like spread
   const detunes = [-7, 0, 7, 12];
@@ -1467,6 +1470,50 @@ function playMetronome(t, isAccent) {
   const noiseEnv = ctx.createGain(); noiseEnv.gain.value = vol * 0.5;
   noise.connect(bp); bp.connect(noiseEnv); noiseEnv.connect(masterGain);
   noise.start(t);
+}
+
+// ── Power Guitar: 8-bit Nintendo power chord ──
+function playPwrGuitar(freq, durSec, isAccent, time, tr) {
+  if (!ctx || !freq) return;
+  const dest = getSynthConnectNode(tr);
+  const vel = isAccent ? 0.38 : 0.26;
+
+  // Power chord = root + fifth + octave
+  const intervals = [1, 1.5, 2]; // root, perfect fifth, octave
+  // 8-bit: square waves with slight detune per voice
+  const detunes = [0, 5, -4];
+
+  intervals.forEach((ratio, i) => {
+    const osc = ctx.createOscillator(); osc.type = 'square';
+    osc.frequency.value = freq * ratio;
+    osc.detune.value = detunes[i];
+    const voiceVol = i === 0 ? 1 : i === 1 ? 0.7 : 0.5;
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0, time);
+    env.gain.linearRampToValueAtTime(vel * voiceVol, time + 0.004); // sharp attack
+    env.gain.exponentialRampToValueAtTime(vel * voiceVol * 0.65, time + 0.03); // slight drop
+    env.gain.setValueAtTime(vel * voiceVol * 0.65, time + durSec - 0.02);
+    env.gain.linearRampToValueAtTime(0, time + durSec + 0.01); // hard cut
+    osc.connect(env); env.connect(dest);
+    osc.start(time); osc.stop(time + durSec + 0.02);
+  });
+
+  // Bit-crusher feel: add a pulse wave an octave down for body
+  const sub = ctx.createOscillator(); sub.type = 'square';
+  sub.frequency.value = freq * 0.5;
+  const subEnv = ctx.createGain();
+  subEnv.gain.setValueAtTime(0, time);
+  subEnv.gain.linearRampToValueAtTime(vel * 0.4, time + 0.004);
+  subEnv.gain.exponentialRampToValueAtTime(vel * 0.15, time + 0.08);
+  subEnv.gain.linearRampToValueAtTime(0, time + durSec);
+  sub.connect(subEnv); subEnv.connect(dest);
+  sub.start(time); sub.stop(time + durSec + 0.02);
+
+  // Hard clip waveshaper for crunch
+  const ws = ctx.createWaveShaper();
+  const curve = new Float32Array(256);
+  for (let i = 0; i < 256; i++) { const x = (i*2)/256-1; curve[i] = Math.tanh(x * 4); }
+  ws.curve = curve;
 }
 
 function playKick(t) {
@@ -2126,7 +2173,7 @@ async function renderSlotToWav(snap) {
 
         } else if (key === 'stab') {
           // Match playStab exactly
-          const vel = isAccent ? 0.347 : 0.240;
+          const vel = isAccent ? 0.246 : 0.170;
           const env = o.createGain();
           [-7,0,7,12].forEach(det => {
             const osc = o.createOscillator(); osc.type='sawtooth';
@@ -2188,6 +2235,20 @@ async function renderSlotToWav(snap) {
           env.gain.exponentialRampToValueAtTime(0.001,t+decay);
           src2.connect(lp); lp.connect(notch); notch.connect(env); env.connect(offDest);
           src2.start(t); src2.stop(t+decay+0.02);
+
+        } else if (key === 'pguit') {
+          const pVel = isAccent ? 0.38 : 0.26;
+          [[1,0],[1.5,5],[2,-4],[0.5,0]].forEach(([ratio, det], i) => {
+            const osc = offline.createOscillator(); osc.type = 'square';
+            osc.frequency.value = freq * ratio; osc.detune.value = det;
+            const voiceVol = [1, 0.7, 0.5, 0.4][i];
+            const env = offline.createGain();
+            env.gain.setValueAtTime(0,t); env.gain.linearRampToValueAtTime(pVel*voiceVol,t+0.004);
+            env.gain.exponentialRampToValueAtTime(pVel*voiceVol*0.65,t+0.03);
+            env.gain.setValueAtTime(pVel*voiceVol*0.65,t+dur-0.02);
+            env.gain.linearRampToValueAtTime(0,t+dur+0.01);
+            osc.connect(env); env.connect(offDest); osc.start(t); osc.stop(t+dur+0.02);
+          });
 
         } else if (key === 'rhodes2') {
           // Match playRhodes2 — warm electric piano
@@ -2979,8 +3040,14 @@ function placeNotes(tr, noteCount, accentRatio, level) {
   const key = trackInstruments[tr];
   // Kick: never land on beat 1 (step 0) or beat 3 (step 8) — those belong to the BEAT
   if (key === 'skick') { grid[tr][0] = 0; grid[tr][8] = 0; }
-  // Guiro: max 2 accents per measure
+  // Handclap: always on beats 2 and 4 only (steps 4 and 12)
+  if (key === 'clap') {
+    for (let s = 0; s < NUM_STEPS; s++) grid[tr][s] = 0;
+    grid[tr][4] = 2; grid[tr][12] = 2;
+  }
+  // Guiro: max 2 accents per measure, 40% chance of accent on beat 1
   if (key === 'guiro') {
+    if (Math.random() < 0.4) { grid[tr][0] = 2; } // accent on the 1
     let accCount = 0;
     for (let s = 0; s < NUM_STEPS; s++) {
       if (grid[tr][s] === 2) { if (accCount >= 2) grid[tr][s] = 1; else accCount++; }
@@ -3033,7 +3100,7 @@ function randomizeTrack(tr) {
     if (vb) { const f = vb.querySelector('.track-vol-fill'); if (f) f.style.width = Math.round(defaultVol * 100) + '%'; }
   }
 
-  if (trackInstruments[tr] === 'sbass' || trackInstruments[tr] === 'sbass3' || trackInstruments[tr] === 'sbass4' || trackInstruments[tr] === 'stab' || trackInstruments[tr] === 'sstring' || trackInstruments[tr] === 'sleg' || trackInstruments[tr] === 'sparkle' || trackInstruments[tr] === 'rhodes' || trackInstruments[tr] === 'rhodes2') {
+  if (trackInstruments[tr] === 'sbass' || trackInstruments[tr] === 'sbass3' || trackInstruments[tr] === 'sbass4' || trackInstruments[tr] === 'stab' || trackInstruments[tr] === 'sstring' || trackInstruments[tr] === 'sleg' || trackInstruments[tr] === 'sparkle' || trackInstruments[tr] === 'rhodes' || trackInstruments[tr] === 'rhodes2' || trackInstruments[tr] === 'pguit') {
     randomizeBassTrack(tr, level); return;
   }
 
@@ -3061,70 +3128,62 @@ function randomizeTrack(tr) {
 }
 
 function wireShiftButton(btn, tr, dir) {
-  let interval = null, holdTimer = null, active = false;
+  let holdTimer = null, autoInterval = null, didHold = false;
+
   const doShift = () => {
-    if (!active) return;
     if (grid[tr].every(v => v === 0)) return;
     trackOffset[tr] = (trackOffset[tr] + dir + NUM_STEPS) % NUM_STEPS;
     redrawTrackCells(tr); markModified();
   };
-  const startHold = () => {
-    if (interval) return;
-    interval = setInterval(doShift, (60000 / bpm) * 4 * 4);
+
+  const stopAuto = () => {
+    clearInterval(autoInterval); autoInterval = null;
+    btn.classList.remove('pulsing');
   };
-  const stop = () => {
-    active = false;
-    clearTimeout(holdTimer); holdTimer = null;
-    clearInterval(interval); interval = null;
-  };
+
   const onDown = () => {
-    active = true;
-    doShift();
-    holdTimer = setTimeout(startHold, 400);
+    didHold = false;
+    holdTimer = setTimeout(() => {
+      didHold = true;
+      btn.classList.add('pulsing');
+      doShift();
+      const barMs = stepDuration() * NUM_STEPS * 1000;
+      autoInterval = setInterval(() => { doShift(); }, barMs);
+    }, 400);
   };
+
+  const onUp = () => {
+    if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+    if (!didHold) doShift();          // tap = shift once
+    else stopAuto();                   // release after hold = stop auto
+    didHold = false;
+  };
+
   btn.addEventListener('mousedown', onDown);
-  btn.addEventListener('mouseup', stop);
-  btn.addEventListener('mouseleave', stop);
+  btn.addEventListener('mouseup', onUp);
+  btn.addEventListener('mouseleave', () => { clearTimeout(holdTimer); holdTimer = null; });
   btn.addEventListener('touchstart', e => { e.preventDefault(); onDown(); }, { passive: false });
-  btn.addEventListener('touchend', e => { e.preventDefault(); stop(); }, { passive: false });
-  btn.addEventListener('touchcancel', stop);
+  btn.addEventListener('touchend', e => { e.preventDefault(); onUp(); }, { passive: false });
+  btn.addEventListener('touchcancel', () => { clearTimeout(holdTimer); holdTimer = null; stopAuto(); });
 }
 
 // Global registry so clearAll can stop all active auto-shifts
 const autoShiftStops = {};
 
 function wireRandomizeButton(btn, tr) {
-  let shiftInterval = null, pulseInterval = null;
-  let autoShifting = false, holdTimer = null, didHold = false;
+  let holdTimer = null, autoInterval = null, didHold = false;
 
-  const startAutoShift = () => {
-    autoShifting = true;
-    autoShiftStops[tr] = stopAutoShift;
-    btn.classList.add('pulsing');
-    const tbtn = document.getElementById(`tbtn-${tr}`);
-    const barMs = stepDuration() * NUM_STEPS * 1000;
-    shiftInterval = setInterval(() => {
-      if (grid[tr].every(v => v === 0)) return;
-      trackOffset[tr] = (trackOffset[tr] + 1 + NUM_STEPS) % NUM_STEPS;
-      redrawTrackCells(tr); markModified();
-    }, barMs);
-    const quarterMs = stepDuration() * 4 * 1000;
-    let pulseOn = true;
-    pulseInterval = setInterval(() => {
-      pulseOn = !pulseOn;
-      btn.classList.toggle('pulsing', pulseOn);
-      if (tbtn) tbtn.classList.toggle('shifting', pulseOn);
-    }, quarterMs);
-    if (tbtn) tbtn.classList.add('shifting');
+  const doRandomize = () => {
+    randomizeTrack(tr);
+    trackVolume[tr] = 0.5;
+    if (trackGainNodes[tr] && ctx) trackGainNodes[tr].gain.setTargetAtTime(0.5, ctx.currentTime, 0.01);
+    const vb = document.getElementById(`vbar-${tr}`);
+    if (vb) { const f = vb.querySelector('.track-vol-fill'); if (f) f.style.width = '50%'; }
   };
 
-  const stopAutoShift = () => {
-    autoShifting = false;
-    clearInterval(shiftInterval); shiftInterval = null;
-    clearInterval(pulseInterval); pulseInterval = null;
+  const stopAuto = () => {
+    clearInterval(autoInterval); autoInterval = null;
     btn.classList.remove('pulsing');
-    const tbtn = document.getElementById(`tbtn-${tr}`);
-    if (tbtn) tbtn.classList.remove('shifting');
     delete autoShiftStops[tr];
   };
 
@@ -3132,32 +3191,24 @@ function wireRandomizeButton(btn, tr) {
     didHold = false;
     holdTimer = setTimeout(() => {
       didHold = true;
-      if (autoShifting) stopAutoShift();
-      else startAutoShift();
+      btn.classList.add('pulsing');
+      doRandomize();
+      const barMs = stepDuration() * NUM_STEPS * 1000;
+      autoInterval = setInterval(() => { doRandomize(); }, barMs);
+      autoShiftStops[tr] = stopAuto;
     }, 400);
   };
 
   const onUp = () => {
     if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
-    if (!didHold) {
-      if (autoShifting) stopAutoShift();
-      else {
-        randomizeTrack(tr);
-        // Set track volume to 50% (middle)
-        trackVolume[tr] = 0.5;
-        if (trackGainNodes[tr] && ctx) trackGainNodes[tr].gain.setTargetAtTime(0.5, ctx.currentTime, 0.01);
-        const vb = document.getElementById(`vbar-${tr}`);
-        if (vb) { const f = vb.querySelector('.track-vol-fill'); if (f) f.style.width = '50%'; }
-      }
-    }
+    if (!didHold) doRandomize();   // tap = randomize once
+    else stopAuto();                // release after hold = stop auto
+    didHold = false;
   };
 
   btn.addEventListener('mousedown', onDown);
   btn.addEventListener('mouseup', onUp);
-  btn.addEventListener('mouseleave', () => {
-    // Only cancel the hold-start timer, don't stop autoShift
-    clearTimeout(holdTimer); holdTimer = null;
-  });
+  btn.addEventListener('mouseleave', () => { clearTimeout(holdTimer); holdTimer = null; });
   btn.addEventListener('touchstart', e => { e.preventDefault(); onDown(); }, { passive: false });
   btn.addEventListener('touchend', e => { e.preventDefault(); onUp(); }, { passive: false });
   btn.addEventListener('touchcancel', () => { clearTimeout(holdTimer); holdTimer = null; });
