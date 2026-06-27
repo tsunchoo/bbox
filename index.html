@@ -128,7 +128,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
   font-family: 'DM Sans', sans-serif; font-size: 0.72rem; font-weight: 700;
   letter-spacing: 0.5px; text-transform: uppercase; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  touch-action: manipulation; transition: background 0.1s, color 0.1s;
+  touch-action: manipulation; transition: background 0.1s;
 }
 .track-ctrl-icon-btn.on { background: var(--playhead); color: #fff; }
 .track-ctrl-icon-btn.sweep-on { background: #5bbcb8; color: #fff; }
@@ -316,16 +316,16 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
   background: #b0b0b0; border: none; color: var(--text);
   font-family: 'DM Sans', sans-serif; font-size: 1.6rem; font-weight: 700; letter-spacing: 0;
   padding: 16px 0; cursor: pointer; text-align: center;
-  touch-action: manipulation; transition: background 0.1s, color 0.1s;
+  touch-action: manipulation; transition: background 0.1s;
 }
-.slot-btn.saved  { color: #111; }  /* bg set inline from snap.barColor */
+.slot-btn.saved  { color: #ffe033 !important; }
 .slot-btn.pending { animation: slot-pending 0.4s infinite alternate; color: #fff; }
 @keyframes slot-pending { from { background: var(--slot-saved); } to { background: var(--bg); } }
-.slot-btn.loaded { color: #ffe033; }  /* bg set inline, yellow text when active */
+.slot-btn.loaded { color: #ffe033 !important; }
 .slot-btn.loaded.beat-pulse { animation: slot-pulse 0.12s ease-out; }
 @keyframes slot-pulse { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
 #playBtn.btn-beat-pulse, #beatBtn.btn-beat-pulse { animation: slot-pulse 0.12s ease-out; }
-.slot-btn:active { background: #ffac00 !important; color: #111 !important; opacity: 1; }
+.slot-btn:active { opacity: 0.7; }
 
 #loadingOverlay {
   position: fixed; inset: 0; background: var(--bg);
@@ -3164,7 +3164,7 @@ function updateSlotButtons() {
         btn.style.color = '#ffe033'; // yellow when active
       } else {
         btn.classList.add('saved');
-        btn.style.color = '#111';
+        btn.style.color = '#ffe033';
       }
     } else {
       btn.style.background = '#555';
