@@ -631,7 +631,6 @@ function scheduler() {
     if (step === 0) {
       if (_autoRandPending) {
         _autoRandPending = false;
-        if (!_recallSnap || _recallSnap.speciesName === _currentSpecies) _recallSnap = snapshotState();
         randAll(_autoRandMode); _autoRandMode = undefined;
       }
     }
@@ -2466,12 +2465,9 @@ let _autoRandPending = false;
 
 function queueRand(mode) {
   if (playing) {
-    // Save current pattern NOW before it changes
-    _recallSnap = snapshotState();
     _autoRandPending = true;
     _autoRandMode = mode;
   } else {
-    _recallSnap = snapshotState();
     randAll(mode);
   }
 }
@@ -2833,6 +2829,8 @@ function randAll(mode) {
   const nd = document.getElementById('nameDisplay'); if (nd) nd.textContent = (_currentSpecies || '');
   const kd = document.getElementById('keyDisplay');
   if (kd) { const kn = getKeyName(); kd.textContent = (kn || '').replace(/-/g, ' '); }
+  // Save this new pattern so RECALL can return to it next time
+  _recallSnap = snapshotState();
   markModified();
 }
 
@@ -3416,7 +3414,7 @@ let _recallInterval = null;
 function startRecallLoop() {
   if (_recallInterval) return;
   _recallInterval = setInterval(() => {
-    if (playing) _recallSnap = snapshotState();
+    // recall loop disabled
   }, (60 / bpm) * 4 * 1000);
 }
 
@@ -3429,15 +3427,8 @@ function stopRecallLoop() {
   if (!btn) return;
 
   const doRecall = () => {
-    console.log('RECALL tapped, snap=', !!_recallSnap);
     if (_recallSnap) {
-      try {
-        console.log('snap instrument 0:', _recallSnap.trackInstruments[0], 'current:', trackInstruments[0]);
-        console.log('snap grid[0][0]:', _recallSnap.grid[0][0], 'current:', grid[0][0]);
-        console.log('snap species:', _recallSnap.speciesName, 'current:', _currentSpecies);
-        restoreState(_recallSnap); console.log('RECALL restored');
-      }
-      catch(e) { console.error('RECALL error:', e); }
+      restoreState(_recallSnap);
       flashBtnBlue('scratchBtn');
     }
   };
