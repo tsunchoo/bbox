@@ -318,14 +318,14 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
   padding: 16px 0; cursor: pointer; text-align: center;
   touch-action: manipulation; transition: background 0.1s, color 0.1s;
 }
-.slot-btn.saved  { background: var(--slot-saved); color: #fff; }
+.slot-btn.saved  { background: var(--btn-bg, #555); color: #ffac00; }
 .slot-btn.pending { animation: slot-pending 0.4s infinite alternate; color: #fff; }
 @keyframes slot-pending { from { background: var(--slot-saved); } to { background: var(--bg); } }
-.slot-btn.loaded { background: var(--slot-loaded); color: #fff; }
+.slot-btn.loaded { background: var(--bar-color, #aa64a6); color: #111; }
 .slot-btn.loaded.beat-pulse { animation: slot-pulse 0.12s ease-out; }
 @keyframes slot-pulse { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
 #playBtn.btn-beat-pulse, #beatBtn.btn-beat-pulse { animation: slot-pulse 0.12s ease-out; }
-.slot-btn:active { background: var(--slot-saved) !important; color: #111 !important; opacity: 1; }
+.slot-btn:active { background: #ffac00 !important; color: #111 !important; opacity: 1; }
 
 #loadingOverlay {
   position: fixed; inset: 0; background: var(--bg);
@@ -2635,6 +2635,7 @@ function updateRecBtn() {
 
 const BAR_COLORS = ['#aa64a6', '#bfa826', '#bfa07b', '#bf8181', '#bf94bf', '#97bf8f', '#74b8bf', '#7893bf', '#bdbf88', '#ba9696', '#9fb4b7', '#baab89', '#aeb7ae', '#bdabb1', '#b6abb7', '#aeafb8', '#a8b9bb', '#b4baae', '#bfbaa8', '#bcaead', '#babcad', '#bfbdad', '#b4b792', '#a5b196', '#96ac96', '#85a7a4', '#85b0b5', '#bfa885', '#bf998d', '#ba8c9c', '#a88ead', '#9c93ae', '#9397ae', '#aab5bd', '#aeb7ae', '#bfba93', '#bdabb1', '#b6abb7', '#aeafb8'];
 let _currentBarColor = "#aa64a6";
+document.documentElement.style.setProperty('--bar-color', _currentBarColor);
 const SPECIES_NAMES = ['mercury', 'venus', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'phobos', 'deimos', 'io', 'europa', 'ganymede', 'callisto', 'amalthea', 'himalia', 'titan', 'enceladus', 'mimas', 'dione', 'rhea', 'tethys', 'hyperion', 'iapetus', 'phoebe', 'titania', 'oberon', 'umbriel', 'ariel', 'miranda', 'puck', 'caliban', 'sycorax', 'triton', 'nereid', 'proteus', 'larissa', 'galatea', 'despina', 'thalassa', 'charon', 'nix', 'hydra', 'kerberos', 'styx', 'ceres', 'pluto', 'eris', 'makemake', 'haumea', 'sedna', 'orcus', 'quaoar', 'ixion', 'pallas', 'vesta', 'hygiea', 'juno', 'psyche', 'davida', 'sylvia', 'interamnia', 'bamberga', 'herculina', 'euphrosyne', 'doris', 'themis', 'cybele', 'camilla', 'halley', 'encke', 'tempel', 'hartley', 'churyumov', 'biela', 'arend', 'bennett', 'bradfield', 'hale', 'bopp', 'hyakutake', 'ikeya', 'seki', 'lovejoy', 'neowise', 'sirius', 'canopus', 'rigel', 'vega', 'capella', 'arcturus', 'aldebaran', 'spica', 'antares', 'fomalhaut', 'deneb', 'regulus', 'altair', 'betelgeuse', 'pollux', 'castor', 'procyon', 'achernar', 'acrux', 'mimosa', 'hadar', 'mizar', 'alioth', 'alcor', 'dubhe', 'merak', 'phecda', 'megrez', 'alnitak', 'alnilam', 'mintaka', 'saiph', 'bellatrix', 'alderamin', 'alpheratz', 'schedar', 'caph', 'ruchbah', 'segin', 'enif', 'sadalsuud', 'sadalmelik', 'sadachbia', 'sadalbari', 'ancha', 'shaula', 'lesath', 'alniyat', 'graffias', 'dschubba', 'fang', 'pi', 'rho', 'zubenelgenubi', 'zubeneschamali', 'zubenelhakrabi', 'andromeda', 'triangulum', 'centaurus', 'sculptor', 'fornax', 'tucana', 'carina', 'orion', 'helix', 'crab', 'ring', 'eagle', 'lagoon', 'trifid', 'rosette', 'omega', 'dumbell', 'blinking', 'eskimo', 'cat', 'owl', 'boomerang', 'hourglass', 'red', 'spider', 'butterfly', 'stingray', 'cassiopeia', 'cygnus', 'lyra', 'aquila', 'serpens', 'ophiuchus', 'hercules', 'bootes', 'corona', 'virgo', 'libra', 'scorpius', 'sagittarius', 'capricornus', 'aquarius', 'pisces', 'aries', 'taurus', 'gemini', 'cancer', 'leo', 'draco', 'ursa', 'lupus', 'ara', 'pavo', 'grus', 'phoenix', 'hydrus', 'reticulum', 'pictor', 'columba', 'lepus', 'eridanus']
 function getSpeciesName() {
   return SPECIES_NAMES[Math.floor(Math.random() * SPECIES_NAMES.length)];
@@ -2983,7 +2984,7 @@ function randAll(mode) {
   _currentSpecies = getSpeciesName();
   _currentBarColor = BAR_COLORS[Math.floor(Math.random() * BAR_COLORS.length)];
   const barEl = document.querySelector('#nameDisplay').parentElement;
-  if (barEl) barEl.style.background = _currentBarColor;
+  if (barEl) { barEl.style.background = _currentBarColor; document.documentElement.style.setProperty('--bar-color', _currentBarColor); }
   // Update key/scale display
   const nd = document.getElementById('nameDisplay'); if (nd) nd.textContent = (_currentSpecies || '');
   const kd = document.getElementById('keyDisplay');
@@ -3100,6 +3101,7 @@ function restoreState(snap) {
     // Use white text on dark colors, black on light
     const _c = _currentBarColor.replace('#',''); const _r=parseInt(_c.slice(0,2),16),_g=parseInt(_c.slice(2,4),16),_b=parseInt(_c.slice(4,6),16);
     barEl.style.color = '#111';
+    document.documentElement.style.setProperty('--bar-color', _currentBarColor);
   }
   }
   if (snap.beatPlaying !== undefined) {
@@ -3250,15 +3252,34 @@ function randomizeTrack(tr) {
     randomizeBassTrack(tr, level); return;
   }
 
-  // Cowbell, hihat, shaker, handclap: 30% chance of straight quarter or 8th note pattern
+  // Straight pattern logic
   const straightKeys = new Set(['shihat','shak','clap','sleg']);
-  if (straightKeys.has(key) && Math.random() < 0.3) {
-    const isEighths = Math.random() < 0.5; // 50/50 quarters vs eighths
-    const step = isEighths ? 2 : 4; // 8th = every 2 steps, quarter = every 4 steps
+  // All tonal instruments: 25% chance of downbeats or upbeats
+  const isTonalStraight = TONAL_KEYS.has(key) && !straightKeys.has(key) && Math.random() < 0.125;
+
+  if (straightKeys.has(key) && Math.random() < 0.3 || isTonalStraight) {
+    const isEighths = Math.random() < 0.5;
+    const step = isEighths ? 2 : 4;
+    // Downbeats (0,4,8,12) or upbeats (2,6,10,14) — 50/50
+    const isUpbeat = isTonalStraight && Math.random() < 0.5;
+    const offset = isUpbeat ? 1 : 0; // upbeat = start on step 1 of each beat pair
     for (let s = 0; s < NUM_STEPS; s++) {
       const gs = (s - trackOffset[tr] + NUM_STEPS) % NUM_STEPS;
-      // Accent on beat 1 (step 0), soft elsewhere
-      grid[tr][gs] = (s % step === 0) ? (s === 0 ? 2 : 1) : 0;
+      const hits = isUpbeat
+        ? (s % 4 === 2) // upbeats: steps 2,6,10,14
+        : (s % step === 0); // downbeats
+      grid[tr][gs] = hits ? (s === 0 || s === 8 ? 2 : 1) : 0;
+    }
+    redrawTrackCells(tr); markModified(); return;
+  }
+
+  // NOISE: always straight, full measure, either all downbeats or all upbeats
+  if (key === 'ngate') {
+    const isUpbeat = Math.random() < 0.5;
+    for (let s = 0; s < NUM_STEPS; s++) {
+      const gs = (s - trackOffset[tr] + NUM_STEPS) % NUM_STEPS;
+      const hits = isUpbeat ? (s % 4 === 2) : (s % 4 === 0);
+      grid[tr][gs] = hits ? (s === 0 ? 2 : 1) : 0;
     }
     redrawTrackCells(tr); markModified(); return;
   }
