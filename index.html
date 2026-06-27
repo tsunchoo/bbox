@@ -3130,17 +3130,20 @@ function wireRandomizeButton(btn, tr) {
     btn.classList.remove('rand-auto'); void btn.offsetWidth; btn.classList.add('rand-auto');
   };
 
-  // Single tap: pulse red, queue rand on next downbeat
+  // Single tap: pulse red, randomize this track on next downbeat (or immediately if stopped)
   const doSingleTap = () => {
     if (autoInterval) { stopAuto(); return; }
     btn.classList.add('rand-pending');
-    // Queue rand on next step 0, or immediately if stopped
     if (playing) {
-      _autoRandPending = true; _autoRandMode = undefined;
-      // Clear pending style when it fires — poll until _autoRandPending clears
-      pendingTimeout = setInterval(() => {
-        if (!_autoRandPending) { btn.classList.remove('rand-pending'); clearInterval(pendingTimeout); pendingTimeout = null; doRand(); }
-      }, 50);
+      // Wait for next step 0 then randomize just this track
+      const checkStep = setInterval(() => {
+        if (currentStep === 0) {
+          clearInterval(checkStep);
+          doRand();
+          btn.classList.remove('rand-pending');
+        }
+      }, 20);
+      pendingTimeout = checkStep;
     } else {
       doRand();
       btn.classList.remove('rand-pending');
