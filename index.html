@@ -50,6 +50,7 @@ header .sub { font-size: 0.44rem; color: var(--dim); letter-spacing: 2px; text-t
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @keyframes spin-reverse { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
 .reel-wrap.spinning-reverse { animation: spin-reverse 1s linear infinite; transform-origin: center; }
+.reel-wrap.spinning-reverse .reel { filter: brightness(0); }
 .reel-wrap.spinning { animation: spin 2s linear infinite; transform-origin: center; }
 .transport {
   width: 100%; max-width: 960px; display: flex; align-items: stretch;
@@ -3512,13 +3513,14 @@ function stopRecallLoop() {
       });
       restoreState(_recallSnap);
       flashBtnBlue('scratchBtn');
-      const _barMs = playing ? (60 / bpm) * 4 * 1000 : 800;
-      setTimeout(() => {
-        document.querySelectorAll('.reel-wrap').forEach(r => {
-          r.classList.remove('spinning-reverse');
-          if (playing) r.classList.add('spinning');
-        });
-      }, _barMs);
+      window._reelReversePending = true;
+      // If not playing, flip back after 800ms
+      if (!playing) setTimeout(() => {
+        if (window._reelReversePending) {
+          window._reelReversePending = false;
+          document.querySelectorAll('.reel-wrap').forEach(r => r.classList.remove('spinning-reverse'));
+        }
+      }, 800);
     }
   };
 
