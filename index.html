@@ -574,7 +574,7 @@ function playBuffer(key, isAccent, time, tr) {
 
   const src = ctx.createBufferSource(); src.buffer = buf;
   const instrumentGain = ctx.createGain();
-  instrumentGain.gain.value = (key === 'shak') ? 0.5 : (key === 'clap') ? 0.354 : (key === 'tamb') ? 0.794 : (key === 'cowb') ? 0.631 : (key === 'guiro') ? 0.355 : (key === 'congHi' || key === 'congLo' || key === 'bongHi' || key === 'bongLo') ? 0.631 : 1.0;
+  instrumentGain.gain.value = (key === 'shak') ? 0.5 : (key === 'clap') ? 0.354 : (key === 'tamb') ? 0.794 : (key === 'snrcrunch') ? 0.5 : (key === 'guiro') ? 0.355 : (key === 'congHi' || key === 'congLo' || key === 'bongHi' || key === 'bongLo') ? 0.631 : 1.0;
   // V: verb button — apply reverb based on level (1=gate, 2=room, 3=hall)
   if (tr !== undefined && trackSweep[tr] > 0) {
     const verbLevel = trackSweep[tr];
@@ -1501,6 +1501,47 @@ function playMetronome(t, isAccent) {
   noise.start(t);
 }
 
+
+// ── Snare Crunch: punchy midrange synth snare with crunch distortion ──
+function playSnrCrunch(isAccent, time, tr) {
+  if (!ctx) return;
+  const dest = (tr !== undefined && trackGainNodes[tr]) ? trackGainNodes[tr] : masterGain;
+  const vel = isAccent ? 0.9 : 0.6;
+
+  // Noise body — punchy midrange
+  const dur = isAccent ? 0.18 : 0.13;
+  const nBuf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
+  const nd = nBuf.getChannelData(0);
+  for (let i = 0; i < nd.length; i++) nd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i/nd.length, 1.2);
+  const noise = ctx.createBufferSource(); noise.buffer = nBuf;
+
+  // Bandpass centred in the mid punch zone
+  const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 800; bp.Q.value = 1.5;
+  const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 200;
+
+  // Hard waveshaper crunch
+  const ws = ctx.createWaveShaper();
+  const curve = new Float32Array(512);
+  for (let i = 0; i < 512; i++) { const x = (i * 2) / 512 - 1; curve[i] = Math.tanh(x * 8); }
+  ws.curve = curve;
+
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(vel, time);
+  g.gain.exponentialRampToValueAtTime(0.001, time + dur);
+
+  // Tonal body: short sine thump
+  const body = ctx.createOscillator(); body.type = 'sine';
+  body.frequency.setValueAtTime(200, time);
+  body.frequency.exponentialRampToValueAtTime(80, time + 0.04);
+  const bodyGain = ctx.createGain();
+  bodyGain.gain.setValueAtTime(vel * 0.5, time);
+  bodyGain.gain.exponentialRampToValueAtTime(0.001, time + 0.06);
+  body.connect(bodyGain); bodyGain.connect(ws); ws.connect(dest);
+  body.start(time); body.stop(time + 0.07);
+
+  noise.connect(bp); bp.connect(hp); hp.connect(g); g.connect(ws);
+  noise.start(time);
+}
 
 // ── Synth Flute: 80s FM-style breathy flute ──
 function playSynthFlute(freq, durSec, isAccent, time, tr) {
@@ -2810,7 +2851,7 @@ function randAll(mode) {
   const tonalKeys = Object.keys(INSTRUMENTS).filter(k => TONAL_KEYS.has(k));
   const allKeys = Object.keys(INSTRUMENTS);
 
-  const soloPercKeys = new Set(['tamb','shak','cowb','ngate','clap','guiro']); // max one of these
+  const soloPercKeys = new Set(['tamb','shak','snrcrunch','ngate','clap','guiro']); // max one of these
 
   function buildPool(keys) {
     const shuffled = [...keys].sort(() => Math.random() - 0.5);
@@ -2861,7 +2902,7 @@ function randAll(mode) {
     if (sb) { const tonal = TONAL_KEYS.has(k); sb.textContent = tonal ? 'E' : 'S'; }
     trackRLevel[tr] = level;
     randomizeTrack(tr);
-    trackVolume[tr] = (pool[tr] === 'skick') ? 0.35 : 0.5;
+    trackVolume[tr] = (pool[tr] === 'skick') ? 0.35 : (pool[tr] === 'guiro') ? 0.25 : (pool[tr] === 'satk') ? 0.30 : (pool[tr] === 'stab') ? 0.30 : 0.5;
     // Reset FX to off first — setFxActive will apply -6dB if FX gets turned on
     trackFx[tr] = { x: 0, y: 0 };
     if (ctx && trackFxNodes[tr]) setFxActive(tr, { x: 0, y: 0 });
@@ -3131,7 +3172,7 @@ function placeNotes(tr, noteCount, accentRatio, level) {
       if (grid[tr][s] === 2) { if (accCount >= 2) grid[tr][s] = 1; else accCount++; }
     }
   }
-  const maxConsec = (key === 'skick' || key === 'ssnare' || key === 'clap' || key === 'cowb') ? 2 : (level === 2 ? 4 : 99);
+  const maxConsec = (key === 'skick' || key === 'ssnare' || key === 'clap' || key === 'snrcrunch') ? 2 : (level === 2 ? 4 : 99);
   const maxAccentConsec = level === 2 ? 2 : 99;
 
   // Iterate until no violations remain
@@ -3183,7 +3224,7 @@ function randomizeTrack(tr) {
   }
 
   // Cowbell, hihat, shaker, handclap: 30% chance of straight quarter or 8th note pattern
-  const straightKeys = new Set(['cowb','shihat','shak','clap','sleg']);
+  const straightKeys = new Set(['shihat','shak','clap','sleg']);
   if (straightKeys.has(key) && Math.random() < 0.3) {
     const isEighths = Math.random() < 0.5; // 50/50 quarters vs eighths
     const step = isEighths ? 2 : 4; // 8th = every 2 steps, quarter = every 4 steps
