@@ -3427,7 +3427,12 @@ function stopRecallLoop() {
   const doRecall = () => {
     console.log('RECALL tapped, snap=', !!_recallSnap);
     if (_recallSnap) {
-      try { restoreState(_recallSnap); console.log('RECALL restored'); }
+      try {
+        console.log('snap instrument 0:', _recallSnap.trackInstruments[0], 'current:', trackInstruments[0]);
+        console.log('snap grid[0][0]:', _recallSnap.grid[0][0], 'current:', grid[0][0]);
+        console.log('snap species:', _recallSnap.speciesName, 'current:', _currentSpecies);
+        restoreState(_recallSnap); console.log('RECALL restored');
+      }
       catch(e) { console.error('RECALL error:', e); }
       flashBtnBlue('scratchBtn');
     }
