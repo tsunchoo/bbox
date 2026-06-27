@@ -631,6 +631,7 @@ function scheduler() {
     if (step === 0) {
       if (_autoRandPending) {
         _autoRandPending = false;
+        _recallSnap = snapshotState(); // save before change
         randAll(_autoRandMode); _autoRandMode = undefined;
       }
     }
@@ -2464,6 +2465,7 @@ async function saveAllCombined() {
 let _autoRandPending = false;
 
 function queueRand(mode) {
+  _recallSnap = snapshotState(); // save before change
   if (playing) {
     _autoRandPending = true;
     _autoRandMode = mode;
@@ -2829,8 +2831,6 @@ function randAll(mode) {
   const nd = document.getElementById('nameDisplay'); if (nd) nd.textContent = (_currentSpecies || '');
   const kd = document.getElementById('keyDisplay');
   if (kd) { const kn = getKeyName(); kd.textContent = (kn || '').replace(/-/g, ' '); }
-  // Save this new pattern so RECALL can return to it next time
-  _recallSnap = snapshotState();
   markModified();
 }
 
@@ -3432,7 +3432,7 @@ function stopRecallLoop() {
       flashBtnBlue('scratchBtn');
     }
   };
-  btn.addEventListener('click', doRecall);
+
   btn.addEventListener('touchstart', e => { e.preventDefault(); }, { passive: false });
   btn.addEventListener('touchend', e => { e.preventDefault(); doRecall(); }, { passive: false });
 })();
