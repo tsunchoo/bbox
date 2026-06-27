@@ -436,7 +436,6 @@ const INSTRUMENTS = {
   ngate:  { name: 'NOISE',       soft: null, accent: null, group: 'perc'  },
   guiro:  { name: 'GUIRO',       soft: 'Sounds/Guiro.wav', accent: 'Sounds/Guiro_Scratch.wav', group: 'perc'  },
   // cowb:   { name: 'COWBELL',     soft: 'Sounds/Cowb50.wav',   accent: 'Sounds/Cowb100.wav',   group: 'perc' },
-  snrcrunch: { name: 'SNR CRUNCH', soft: null, accent: null, group: 'kit' },
   sbass:  { name: 'SYNTH BASS',  soft: null, accent: null, group: 'tonal' },
   sbass3: { name: 'JAMES BASS',  soft: null, accent: null, group: 'tonal' },
   sbass4: { name: 'PUNK BASS',   soft: null, accent: null, group: 'tonal' },
@@ -575,7 +574,7 @@ function playBuffer(key, isAccent, time, tr) {
 
   const src = ctx.createBufferSource(); src.buffer = buf;
   const instrumentGain = ctx.createGain();
-  instrumentGain.gain.value = (key === 'shak') ? 0.5 : (key === 'clap') ? 0.354 : (key === 'tamb') ? 0.794 : (key === 'snrcrunch') ? 0.5 : (key === 'guiro') ? 0.355 : (key === 'congHi' || key === 'congLo' || key === 'bongHi' || key === 'bongLo') ? 0.631 : 1.0;
+  instrumentGain.gain.value = (key === 'shak') ? 0.5 : (key === 'clap') ? 0.354 : (key === 'tamb') ? 0.794 : (key === 'guiro') ? 0.355 : (key === 'congHi' || key === 'congLo' || key === 'bongHi' || key === 'bongLo') ? 0.631 : 1.0;
   // V: verb button — apply reverb based on level (1=gate, 2=room, 3=hall)
   if (tr !== undefined && trackSweep[tr] > 0) {
     const verbLevel = trackSweep[tr];
@@ -1504,47 +1503,6 @@ function playMetronome(t, isAccent) {
   noise.start(t);
 }
 
-
-// ── Snare Crunch: punchy midrange synth snare with crunch distortion ──
-function playSnrCrunch(isAccent, time, tr) {
-  if (!ctx) return;
-  const dest = (tr !== undefined && trackGainNodes[tr]) ? trackGainNodes[tr] : masterGain;
-  const vel = isAccent ? 0.9 : 0.6;
-
-  // Noise body — punchy midrange
-  const dur = isAccent ? 0.18 : 0.13;
-  const nBuf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
-  const nd = nBuf.getChannelData(0);
-  for (let i = 0; i < nd.length; i++) nd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i/nd.length, 1.2);
-  const noise = ctx.createBufferSource(); noise.buffer = nBuf;
-
-  // Bandpass centred in the mid punch zone
-  const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 800; bp.Q.value = 1.5;
-  const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 200;
-
-  // Hard waveshaper crunch
-  const ws = ctx.createWaveShaper();
-  const curve = new Float32Array(512);
-  for (let i = 0; i < 512; i++) { const x = (i * 2) / 512 - 1; curve[i] = Math.tanh(x * 8); }
-  ws.curve = curve;
-
-  const g = ctx.createGain();
-  g.gain.setValueAtTime(vel, time);
-  g.gain.exponentialRampToValueAtTime(0.001, time + dur);
-
-  // Tonal body: short sine thump
-  const body = ctx.createOscillator(); body.type = 'sine';
-  body.frequency.setValueAtTime(200, time);
-  body.frequency.exponentialRampToValueAtTime(80, time + 0.04);
-  const bodyGain = ctx.createGain();
-  bodyGain.gain.setValueAtTime(vel * 0.5, time);
-  bodyGain.gain.exponentialRampToValueAtTime(0.001, time + 0.06);
-  body.connect(bodyGain); bodyGain.connect(ws); ws.connect(dest);
-  body.start(time); body.stop(time + 0.07);
-
-  noise.connect(bp); bp.connect(hp); hp.connect(g); g.connect(ws);
-  noise.start(time);
-}
 
 // ── Synth Flute: 80s FM-style breathy flute ──
 function playSynthFlute(freq, durSec, isAccent, time, tr) {
@@ -2856,7 +2814,7 @@ function randAll(mode) {
   const tonalKeys = Object.keys(INSTRUMENTS).filter(k => TONAL_KEYS.has(k));
   const allKeys = Object.keys(INSTRUMENTS);
 
-  const soloPercKeys = new Set(['tamb','shak','snrcrunch','ngate','clap','guiro']); // max one of these
+  const soloPercKeys = new Set(['tamb','shak','ngate','clap','guiro']); // max one of these
 
   function buildPool(keys) {
     const shuffled = [...keys].sort(() => Math.random() - 0.5);
@@ -3188,7 +3146,7 @@ function placeNotes(tr, noteCount, accentRatio, level) {
       if (grid[tr][s] === 2) { if (accCount >= 2) grid[tr][s] = 1; else accCount++; }
     }
   }
-  const maxConsec = (key === 'skick' || key === 'ssnare' || key === 'clap' || key === 'snrcrunch') ? 2 : (level === 2 ? 4 : 99);
+  const maxConsec = (key === 'skick' || key === 'ssnare' || key === 'clap') ? 2 : (level === 2 ? 4 : 99);
   const maxAccentConsec = level === 2 ? 2 : 99;
 
   // Iterate until no violations remain
@@ -3300,10 +3258,7 @@ function wireRandomizeButton(btn, tr) {
 
   const doRand = () => {
     randomizeTrack(tr);
-    trackVolume[tr] = 0.5;
-    if (trackGainNodes[tr] && ctx) trackGainNodes[tr].gain.setTargetAtTime(0.5, ctx.currentTime, 0.01);
-    const vb = document.getElementById(`vbar-${tr}`);
-    if (vb) { const f = vb.querySelector('.track-vol-fill'); if (f) f.style.width = '50%'; }
+    // Do not reset volume — keep whatever the user has set
   };
 
   const stopAuto = () => {
