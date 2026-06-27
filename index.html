@@ -338,7 +338,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 </head>
 <body>
 
-<button id="loadingOverlay" onclick="document.getElementById('loadingMsg').textContent='TAPPED - LOADING...'; initAudio()">
+<button id="loadingOverlay" onclick="this.style.pointerEvents='none'; document.getElementById('loadingMsg').textContent='LOADING...'; initAudio()">
   <h2>MESMRR</h2>
   <p id="loadingMsg">Tap to load</p>
 </button>
@@ -3389,16 +3389,6 @@ function loadScratchSample() {
   fetch('Sounds/Scratch.wav').then(r=>r.arrayBuffer()).then(ab=>ctx.decodeAudioData(ab)).then(buf=>{ _scratchBuf=buf; }).catch(e=>console.warn('scratch.wav:',e));
 }
 
- = _scratchNodes;
-  gain.gain.setTargetAtTime(0, ctx.currentTime, 0.02);
-  setTimeout(() => { try { src.stop(); } catch(e){} }, 100);
-  _scratchNodes = null;
-  if (window._duckGain) {
-    const dg = window._duckGain.gain;
-    dg.cancelScheduledValues(ctx.currentTime);
-    dg.linearRampToValueAtTime(1, ctx.currentTime + 0.05);
-  }
-}
 
 // RECALL button — saves last pattern every bar, tap to restore it
 let _recallSnap = null;
