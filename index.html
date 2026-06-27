@@ -3062,6 +3062,7 @@ function snapshotState() {
     trackRLevel: [...trackRLevel],
     trackBassScale: Object.fromEntries(Object.entries(trackBassScale).map(([k,v])=>[k,[...v]])),
     globalScaleRoot,
+    currentScaleName,
     bpm, masterVol,
     speciesName: _currentSpecies,
     barColor: _currentBarColor,
@@ -3070,6 +3071,8 @@ function snapshotState() {
 }
 function restoreState(snap) {
   globalScaleRoot = snap.globalScaleRoot ?? null;
+  if (snap.currentScaleName) { currentScaleName = snap.currentScaleName; PENTA_MINOR = SCALES[currentScaleName] || PENTA_MINOR; }
+  if (snap.currentScaleName) { currentScaleName = snap.currentScaleName; PENTA_MINOR = SCALES[currentScaleName] || PENTA_MINOR; }
   for (let tr=0; tr<NUM_TRACKS; tr++) {
     grid[tr]=[...snap.grid[tr]]; trackOffset[tr]=snap.trackOffset[tr];
     const snapInst = snap.trackInstruments[tr];
@@ -3121,6 +3124,7 @@ function restoreState(snap) {
     if (bb) bb.classList.toggle('active', beatPlaying);
     updateBeatPulse();
   }
+  const kd = document.getElementById('keyDisplay'); if (kd) kd.textContent = (getKeyName()||''). replace(/-/g,' ');
 }
 function markModified() {
   // Any edit deactivates the active slot (turns it back to green)
