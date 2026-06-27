@@ -3505,14 +3505,20 @@ function stopRecallLoop() {
 
   const doRecall = () => {
     if (_recallSnap) {
-      // Spin reels backwards during recall
+      // Spin reels backwards for one bar then restore
       document.querySelectorAll('.reel-wrap').forEach(r => {
         r.classList.remove('spinning');
         r.classList.add('spinning-reverse');
       });
-      window._reelReversePending = true;
       restoreState(_recallSnap);
       flashBtnBlue('scratchBtn');
+      const _barMs = playing ? (60 / bpm) * 4 * 1000 : 800;
+      setTimeout(() => {
+        document.querySelectorAll('.reel-wrap').forEach(r => {
+          r.classList.remove('spinning-reverse');
+          if (playing) r.classList.add('spinning');
+        });
+      }, _barMs);
     }
   };
 
