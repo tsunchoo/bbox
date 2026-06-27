@@ -318,10 +318,10 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
   padding: 16px 0; cursor: pointer; text-align: center;
   touch-action: manipulation; transition: background 0.1s, color 0.1s;
 }
-.slot-btn.saved  { background: var(--btn-bg, #555); color: #ffac00; }
+.slot-btn.saved  { color: #111; }  /* bg set inline from snap.barColor */
 .slot-btn.pending { animation: slot-pending 0.4s infinite alternate; color: #fff; }
 @keyframes slot-pending { from { background: var(--slot-saved); } to { background: var(--bg); } }
-.slot-btn.loaded { background: var(--bar-color, #aa64a6); color: #111; }
+.slot-btn.loaded { color: #ffe033; }  /* bg set inline, yellow text when active */
 .slot-btn.loaded.beat-pulse { animation: slot-pulse 0.12s ease-out; }
 @keyframes slot-pulse { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
 #playBtn.btn-beat-pulse, #beatBtn.btn-beat-pulse { animation: slot-pulse 0.12s ease-out; }
@@ -3139,9 +3139,27 @@ function slotPress(i) {
 }
 function updateSlotButtons() {
   for (let i=0;i<NUM_SLOTS;i++) {
-    const btn=document.getElementById(`slot-${i}`); btn.classList.remove('saved','loaded','pending');
-    if (i === _pendingSlot) btn.classList.add('pending');
-    else if (slots[i]!==null) btn.classList.add(i===activeSlot?'loaded':'saved');
+    const btn=document.getElementById(`slot-${i}`); if (!btn) continue;
+    btn.classList.remove('saved','loaded','pending');
+    btn.style.background = '';
+    btn.style.color = '';
+    if (i === _pendingSlot) {
+      btn.classList.add('pending');
+      if (slots[i]?.barColor) btn.style.background = slots[i].barColor;
+    } else if (slots[i] !== null) {
+      const color = slots[i].barColor || '#aa64a6';
+      btn.style.background = color;
+      if (i === activeSlot) {
+        btn.classList.add('loaded');
+        btn.style.color = '#ffe033'; // yellow when active
+      } else {
+        btn.classList.add('saved');
+        btn.style.color = '#111';
+      }
+    } else {
+      btn.style.background = '#555';
+      btn.style.color = '#fff';
+    }
   }
 }
 function buildSlotBar() {
