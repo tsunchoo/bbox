@@ -629,9 +629,8 @@ function scheduler() {
     const t = nextStepTime;
     // Fire pending auto-rand on downbeat
     if (step === 0) {
-      // Auto-save for RECALL: keep previous bar, update with current
-      _recallSnap = _currentBarSnap || snapshotState();
-      _currentBarSnap = snapshotState();
+      // Save current pattern BEFORE any changes fire — this is what RECALL restores
+      _recallSnap = snapshotState();
       if (_autoRandPending) {
         _autoRandPending = false;
         randAll(_autoRandMode); _autoRandMode = undefined;
