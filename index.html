@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>BOOMBOX v15</title>
+<title>MESMRR</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
 :root {
@@ -44,6 +44,7 @@ header .sub { font-size: 0.44rem; color: var(--dim); letter-spacing: 2px; text-t
 .reel-wrap { position: relative; display: inline-block; }
 .reel-wrap.recording .reel { filter: brightness(0) saturate(100%) invert(16%) sepia(90%) saturate(7000%) hue-rotate(355deg) brightness(100%) !important; }
 .reel-wrap.hiss-on .reel { filter: brightness(0) sepia(1) saturate(3) hue-rotate(40deg) brightness(1.2); }
+.reel-wrap.compress-on .reel { filter: brightness(0) sepia(1) saturate(6) hue-rotate(20deg) brightness(1.4); }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .reel-wrap.spinning { animation: spin 2s linear infinite; transform-origin: center; }
 .transport {
@@ -336,7 +337,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 <body>
 
 <button id="loadingOverlay" onclick="document.getElementById('loadingMsg').textContent='TAPPED - LOADING...'; initAudio()">
-  <h2>BOOMBOX</h2>
+  <h2>MESMRR</h2>
   <p id="loadingMsg">Tap to load</p>
 </button>
 
@@ -358,7 +359,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 </div>
 
 <header>
-  <h1>BOOMBOX</h1>
+  <h1>MESMRR</h1>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -1170,21 +1171,20 @@ function playRhodes(freq, durSec, isAccent, time, tr) {
   const vel = isAccent ? 0.240 : 0.164;
   _rhodesGlide[tr] = freq;
 
-  // Inharmonicity factor — real piano strings stretch slightly
-  const B = 0.00015;
+  // Old sample piano: thin, slightly detuned, short decay, nasal quality
+  // Slight bit-reduced character via heavy inharmonicity
+  const B = 0.0008; // more inharmonic = more "old sample" character
   const inharmonic = n => freq * n * Math.sqrt(1 + B * n * n);
 
-  // Natural decay — short at high freqs, longer at low
-  const baseDec = Math.min(durSec + 0.6, 1.8) * (1 + Math.max(0, (300 - freq) / 300) * 0.8);
+  // Short decays — old samples were looped short
+  const baseDec = Math.min(durSec + 0.2, 0.9) * (1 + Math.max(0, (300 - freq) / 300) * 0.4);
 
-  // Partials: amplitude and decay multiplier
+  // Fewer partials, emphasise nasal 2nd/3rd harmonics like a bandlimited sample
   const partials = [
-    { n: 1, amp: 1.00, dec: 1.00 },
-    { n: 2, amp: 0.50, dec: 0.65 },
-    { n: 3, amp: 0.25, dec: 0.42 },
-    { n: 4, amp: 0.12, dec: 0.28 },
-    { n: 5, amp: 0.05, dec: 0.18 },
-    { n: 6, amp: 0.02, dec: 0.12 },
+    { n: 1, amp: 0.70, dec: 1.00 },
+    { n: 2, amp: 0.80, dec: 0.75 }, // strong 2nd — nasal
+    { n: 3, amp: 0.40, dec: 0.50 },
+    { n: 4, amp: 0.15, dec: 0.30 },
   ];
 
   partials.forEach(({ n, amp, dec }) => {
@@ -1194,23 +1194,21 @@ function playRhodes(freq, durSec, isAccent, time, tr) {
     const pk = vel * amp;
     const decT = baseDec * dec;
     env.gain.setValueAtTime(0, time);
-    env.gain.linearRampToValueAtTime(pk, time + 0.002);       // instant attack
-    env.gain.exponentialRampToValueAtTime(pk * 0.55, time + 0.015); // fast initial drop
+    env.gain.linearRampToValueAtTime(pk, time + 0.001);
+    env.gain.exponentialRampToValueAtTime(pk * 0.3, time + 0.008); // fast drop = thin
     env.gain.exponentialRampToValueAtTime(0.0001, time + decT);
     osc.connect(env); env.connect(dest);
     osc.start(time); osc.stop(time + decT + 0.05);
   });
 
-  // Hammer transient: broadband thump with LP sweep
-  const thumpLen = 0.025;
+  // Thin click transient — like a cheap piano sample
+  const thumpLen = 0.010;
   const thumpBuf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * thumpLen), ctx.sampleRate);
   const td = thumpBuf.getChannelData(0);
-  for (let i = 0; i < td.length; i++) td[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / td.length, 2);
+  for (let i = 0; i < td.length; i++) td[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / td.length, 3);
   const thump = ctx.createBufferSource(); thump.buffer = thumpBuf;
-  const thumpLP = ctx.createBiquadFilter(); thumpLP.type = 'lowpass';
-  thumpLP.frequency.setValueAtTime(4000, time);
-  thumpLP.frequency.exponentialRampToValueAtTime(300, time + thumpLen);
-  const thumpEnv = ctx.createGain(); thumpEnv.gain.value = vel * 0.4;
+  const thumpLP = ctx.createBiquadFilter(); thumpLP.type = 'bandpass'; thumpLP.frequency.value = 3000; thumpLP.Q.value = 2;
+  const thumpEnv = ctx.createGain(); thumpEnv.gain.value = vel * 0.6;
   thump.connect(thumpLP); thumpLP.connect(thumpEnv); thumpEnv.connect(dest);
   thump.start(time);
 
@@ -2377,7 +2375,7 @@ function getExportSnaps() {
 }
 
 async function shareOrDownload(files) {
-  const shareData = { files, title: 'BOOMBOX loops' };
+  const shareData = { files, title: 'MESMRR loops' };
   try {
     await navigator.share(shareData);
   } catch(e) {
@@ -3199,7 +3197,7 @@ async function initAudio() {
     msg.textContent = 'RESUMED, BUILDING GRAPH...';
     attachCtxStateWatch();
     masterGain = ctx.createGain(); masterGain.gain.value = masterVol;
-    const masterLimiter = ctx.createDynamicsCompressor();
+    window.masterLimiter = ctx.createDynamicsCompressor(); const masterLimiter = window.masterLimiter;
     masterLimiter.threshold.value = -1;
     masterLimiter.knee.value = 0;
     masterLimiter.ratio.value = 20;
@@ -3589,9 +3587,30 @@ function startHiss() {
   _hissNode._extras = { crackNode, crackGain, rumble, rumbleLFO, rumbleGain };
 }
 
+let _compressOn = false;
 function toggleHiss() {
   if (!ctx) { ctx && ctx.resume(); return; }
   ctx.resume();
+  // Toggle hard compression on reels click
+  _compressOn = !_compressOn;
+  if (window.masterLimiter) {
+    if (_compressOn) {
+      window.masterLimiter.threshold.value = -20;
+      window.masterLimiter.ratio.value = 20;
+      window.masterLimiter.knee.value = 0;
+      window.masterLimiter.attack.value = 0.001;
+      window.masterLimiter.release.value = 0.05;
+    } else {
+      window.masterLimiter.threshold.value = -1;
+      window.masterLimiter.ratio.value = 20;
+      window.masterLimiter.knee.value = 0;
+      window.masterLimiter.attack.value = 0.0003;
+      window.masterLimiter.release.value = 0.1;
+    }
+  }
+  document.querySelectorAll('.reel-wrap').forEach(r => r.classList.toggle('compress-on', _compressOn));
+
+  // Also toggle hiss
   if (!_hissOn) {
     startHiss();
     _hissOn = true;
