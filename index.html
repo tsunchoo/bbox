@@ -49,7 +49,7 @@ header .sub { font-size: 0.44rem; color: var(--dim); letter-spacing: 2px; text-t
 @keyframes reel-pulse { 0% { transform: scale(1); } 40% { transform: scale(1.15); } 100% { transform: scale(1); } }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @keyframes spin-reverse { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
-.reel-wrap.spinning-reverse { animation: spin-reverse 2s linear infinite; transform-origin: center; }
+.reel-wrap.spinning-reverse { animation: spin-reverse 1s linear infinite; transform-origin: center; }
 .reel-wrap.spinning { animation: spin 2s linear infinite; transform-origin: center; }
 .transport {
   width: 100%; max-width: 960px; display: flex; align-items: stretch;
@@ -1498,7 +1498,7 @@ function playMetronome(t, isAccent) {
 function playSynthFlute(freq, durSec, isAccent, time, tr) {
   if (!ctx || !freq) return;
   const dest = getSynthConnectNode(tr);
-  const vel = isAccent ? 0.157 : 0.101;
+  const vel = isAccent ? 0.125 : 0.080;
 
   // FM synthesis: carrier sine + modulator for breathiness
   const modFreq = freq * 2.01; // modulator slightly detuned
@@ -3510,16 +3510,9 @@ function stopRecallLoop() {
         r.classList.remove('spinning');
         r.classList.add('spinning-reverse');
       });
+      window._reelReversePending = true;
       restoreState(_recallSnap);
       flashBtnBlue('scratchBtn');
-      // Restore forward spin after one bar
-      const barMs = (60 / bpm) * 4 * 1000;
-      setTimeout(() => {
-        document.querySelectorAll('.reel-wrap').forEach(r => {
-          r.classList.remove('spinning-reverse');
-          if (playing) r.classList.add('spinning');
-        });
-      }, barMs);
     }
   };
 
