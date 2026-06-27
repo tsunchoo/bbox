@@ -1516,7 +1516,7 @@ const _boogGlide = {};
 function playBoog(freq, durSec, isAccent, time, tr) {
   if (!ctx || !freq) return;
   const dest = getSynthConnectNode(tr);
-  const vel = isAccent ? 0.088 : 0.060;
+  const vel = isAccent ? 0.062 : 0.042;
 
   const prevFreq = _boogGlide[tr] || freq;
   _boogGlide[tr] = freq;
