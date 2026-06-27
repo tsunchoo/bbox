@@ -2647,7 +2647,7 @@ let _currentBarColor = "#aa64a6";
 function barTextColor(hex) {
   const c = hex.replace('#','');
   const r=parseInt(c.slice(0,2),16), g=parseInt(c.slice(2,4),16), b=parseInt(c.slice(4,6),16);
-  return (0.299*r + 0.587*g + 0.114*b) > 128 ? '#111' : '#fff';
+  return (0.299*r + 0.587*g + 0.114*b) > 140 ? '#111' : '#fff';
 }
 function applyBarColor(color) {
   _currentBarColor = color;
