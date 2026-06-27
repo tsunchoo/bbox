@@ -628,9 +628,13 @@ function scheduler() {
     const step = (currentStep + 1) % NUM_STEPS; currentStep = step;
     const t = nextStepTime;
     // Fire pending auto-rand on downbeat
-    if (step === 0 && _autoRandPending) {
-      _autoRandPending = false;
-      randAll(_autoRandMode); _autoRandMode = undefined;
+    if (step === 0) {
+      // Auto-save for RECALL on every bar
+      _recallSnap = snapshotState();
+      if (_autoRandPending) {
+        _autoRandPending = false;
+        randAll(_autoRandMode); _autoRandMode = undefined;
+      }
     }
     // Apply pending slot swap before audio is scheduled so step 0 plays from the new pattern
     if (step === 0 && _pendingSlot >= 0) {
