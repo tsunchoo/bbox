@@ -445,6 +445,8 @@ const INSTRUMENTS = {
   sparkle:{ name: 'MUTED STR',   soft: null, accent: null, group: 'tonal' },
   rhodes: { name: 'PIANO',       soft: null, accent: null, group: 'tonal' },
   rhodes2:{ name: 'RHODES',      soft: null, accent: null, group: 'tonal' },
+  sflute: { name: 'SYN FLUTE',   soft: null, accent: null, group: 'tonal' },
+  satk:   { name: 'SYN ATTACK',  soft: null, accent: null, group: 'tonal' },
 };
 const INSTRUMENT_KEYS = Object.keys(INSTRUMENTS);
 let ctx = null, masterGain = null;
@@ -565,12 +567,14 @@ function playBuffer(key, isAccent, time, tr) {
   if (key === 'sparkle') { return; } // handled in scheduler
   if (key === 'rhodes')  { return; } // handled in scheduler
   if (key === 'rhodes2')  { return; }
+  if (key === 'sflute')   { return; }
+  if (key === 'satk')     { return; }
   const buf = buffers[key]?.[isAccent ? 'accent' : 'soft'];
   if (!buf) return;
 
   const src = ctx.createBufferSource(); src.buffer = buf;
   const instrumentGain = ctx.createGain();
-  instrumentGain.gain.value = (key === 'shak') ? 0.5 : (key === 'clap') ? 0.354 : (key === 'tamb') ? 0.794 : (key === 'cowb') ? 0.631 : (key === 'guiro') ? 0.501 : (key === 'congHi' || key === 'congLo' || key === 'bongHi' || key === 'bongLo') ? 0.631 : 1.0;
+  instrumentGain.gain.value = (key === 'shak') ? 0.5 : (key === 'clap') ? 0.354 : (key === 'tamb') ? 0.794 : (key === 'cowb') ? 0.631 : (key === 'guiro') ? 0.355 : (key === 'congHi' || key === 'congLo' || key === 'bongHi' || key === 'bongLo') ? 0.631 : 1.0;
   // V: verb button — apply reverb based on level (1=gate, 2=room, 3=hall)
   if (tr !== undefined && trackSweep[tr] > 0) {
     const verbLevel = trackSweep[tr];
@@ -684,7 +688,7 @@ function scheduler() {
       const val = grid[tr][gs];
       if (val > 0) {
         const key = trackInstruments[tr];
-        if (key === 'sbass' || key === 'sbass3' || key === 'sbass4' || key === 'stab' || key === 'sstring' || key === 'sleg' || key === 'sparkle' || key === 'rhodes' || key === 'rhodes2') {
+        if (key === 'sbass' || key === 'sbass3' || key === 'sbass4' || key === 'stab' || key === 'sstring' || key === 'sleg' || key === 'sparkle' || key === 'rhodes' || key === 'rhodes2' || key === 'sflute' || key === 'satk') {
           const scale = trackBassScale[tr] || [110];
           const noteIdx = gs % scale.length;
           const freq = scale[noteIdx];
@@ -720,6 +724,8 @@ function scheduler() {
           if (key === 'sparkle') playSparkle(freq, dur, val === 2, t, tr);
           if (key === 'rhodes')  playRhodes(freq, dur, val === 2, t, tr);
           if (key === 'rhodes2') playRhodes2(freq, dur, val === 2, t, tr);
+          if (key === 'sflute')  playSynthFlute(freq, dur, val === 2, t, tr);
+          if (key === 'satk')    playSynthAttack(freq, dur, val === 2, t, tr);
           // E: filter envelope — bright open, sweep closed over note duration
           if (trackChop[tr] && trackEnvFilters[tr]) {
             const ef = trackEnvFilters[tr];
@@ -1002,7 +1008,7 @@ const trackBassScale = {}; // tr -> [freq, ...]
 
 // Global scale root — shared by all tonal tracks, cleared by CLEAR
 let globalScaleRoot = null;
-const TONAL_KEYS = new Set(['sbass','sbass3','sbass4','stab','sstring','sleg','sparkle','rhodes','rhodes2']);
+const TONAL_KEYS = new Set(['sbass','sbass3','sbass4','stab','sstring','sleg','sparkle','rhodes','rhodes2','sflute','satk']);
 
 function buildScaleFromRoot(root) {
   const scale = [];
@@ -1051,6 +1057,7 @@ function randomizeBassTrack(tr, level) {
   const noteTables = {
     sstring: [[1,2,0.10],[2,3,0.20],[2,5,0.30]],   // Choir — fewest
     sleg:    [[1,2,0.10],[2,3,0.20],[2,5,0.30]],   // Strings — fewest
+    satk:    [[1,2,0.25],[2,3,0.40],[2,3,0.50]],   // Syn Attack — max 3
     rhodes:  [[2,3,0.15],[3,6,0.30],[5,8,0.45]],   // Piano — medium
     rhodes2: [[2,3,0.15],[3,6,0.30],[5,8,0.45]],   // Rhodes — medium
   };
@@ -1495,6 +1502,88 @@ function playMetronome(t, isAccent) {
 }
 
 
+// ── Synth Flute: 80s FM-style breathy flute ──
+function playSynthFlute(freq, durSec, isAccent, time, tr) {
+  if (!ctx || !freq) return;
+  const dest = getSynthConnectNode(tr);
+  const vel = isAccent ? 0.28 : 0.18;
+
+  // FM synthesis: carrier sine + modulator for breathiness
+  const modFreq = freq * 2.01; // modulator slightly detuned
+  const modDepth = freq * 1.8;
+
+  const mod = ctx.createOscillator(); mod.type = 'sine'; mod.frequency.value = modFreq;
+  const modGain = ctx.createGain();
+  modGain.gain.setValueAtTime(0, time);
+  modGain.gain.linearRampToValueAtTime(modDepth, time + 0.05);
+  modGain.gain.setValueAtTime(modDepth * 0.7, time + durSec * 0.3);
+  modGain.gain.linearRampToValueAtTime(0, time + durSec + 0.1);
+  mod.connect(modGain);
+
+  const carrier = ctx.createOscillator(); carrier.type = 'sine';
+  carrier.frequency.value = freq;
+  modGain.connect(carrier.frequency); // FM connection
+
+  // Breath noise layer
+  const noiseLen = Math.ceil(ctx.sampleRate * Math.min(durSec + 0.2, 1.5));
+  const nBuf = ctx.createBuffer(1, noiseLen, ctx.sampleRate);
+  const nd = nBuf.getChannelData(0);
+  for (let i = 0; i < noiseLen; i++) nd[i] = (Math.random() * 2 - 1);
+  const noise = ctx.createBufferSource(); noise.buffer = nBuf;
+  const nbp = ctx.createBiquadFilter(); nbp.type = 'bandpass'; nbp.frequency.value = freq * 3; nbp.Q.value = 8;
+  const nGain = ctx.createGain();
+  nGain.gain.setValueAtTime(0, time);
+  nGain.gain.linearRampToValueAtTime(vel * 0.15, time + 0.03);
+  nGain.gain.linearRampToValueAtTime(vel * 0.08, time + durSec * 0.4);
+  nGain.gain.linearRampToValueAtTime(0, time + durSec + 0.05);
+  noise.connect(nbp); nbp.connect(nGain); nGain.connect(dest);
+
+  const env = ctx.createGain();
+  env.gain.setValueAtTime(0, time);
+  env.gain.linearRampToValueAtTime(vel, time + 0.04); // soft attack
+  env.gain.setValueAtTime(vel * 0.85, time + durSec * 0.5);
+  env.gain.linearRampToValueAtTime(0, time + durSec + 0.12);
+
+  carrier.connect(env); env.connect(dest);
+  mod.start(time); mod.stop(time + durSec + 0.2);
+  carrier.start(time); carrier.stop(time + durSec + 0.2);
+  noise.start(time);
+}
+
+// ── Synth Attack: sharp attack with long shimmer tail ──
+function playSynthAttack(freq, durSec, isAccent, time, tr) {
+  if (!ctx || !freq) return;
+  const dest = getSynthConnectNode(tr);
+  const vel = isAccent ? 0.32 : 0.22;
+  const tail = 2.5; // long tail regardless of step duration
+
+  // Sharp metallic attack: two slightly detuned saws
+  [-4, 4].forEach(det => {
+    const osc = ctx.createOscillator(); osc.type = 'sawtooth';
+    osc.frequency.value = freq; osc.detune.value = det;
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(vel, time);
+    env.gain.exponentialRampToValueAtTime(vel * 0.4, time + 0.015); // sharp initial drop
+    env.gain.exponentialRampToValueAtTime(0.001, time + tail);
+    osc.connect(env); env.connect(dest);
+    osc.start(time); osc.stop(time + tail + 0.1);
+  });
+
+  // High shimmer layer: high octave sine
+  const shimmer = ctx.createOscillator(); shimmer.type = 'sine';
+  shimmer.frequency.value = freq * 4;
+  const shimEnv = ctx.createGain();
+  shimEnv.gain.setValueAtTime(vel * 0.3, time);
+  shimEnv.gain.exponentialRampToValueAtTime(0.001, time + tail * 0.7);
+  shimmer.connect(shimEnv); shimEnv.connect(dest);
+  shimmer.start(time); shimmer.stop(time + tail);
+
+  // LP filter sweep: bright to warm
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 2;
+  lp.frequency.setValueAtTime(freq * 12, time);
+  lp.frequency.exponentialRampToValueAtTime(freq * 2, time + 0.3);
+}
+
 function playKick(t) {
   const osc = ctx.createOscillator(), g = ctx.createGain();
   osc.connect(g); g.connect(masterGain);
@@ -1853,6 +1942,8 @@ function previewNote(tr, isAccent) {
     else if (key === 'sparkle') playSparkle(freq, dur, isAccent, t, tr);
     else if (key === 'rhodes')  playRhodes(freq, dur, isAccent, t, tr);
     else if (key === 'rhodes2') playRhodes2(freq, dur, isAccent, t, tr);
+    else if (key === 'sflute')  playSynthFlute(freq, dur, isAccent, t, tr);
+    else if (key === 'satk')    playSynthAttack(freq, dur, isAccent, t, tr);
   } else {
     playBuffer(key, isAccent, t, tr);
   }
@@ -3087,7 +3178,7 @@ function randomizeTrack(tr) {
     if (vb) { const f = vb.querySelector('.track-vol-fill'); if (f) f.style.width = Math.round(defaultVol * 100) + '%'; }
   }
 
-  if (trackInstruments[tr] === 'sbass' || trackInstruments[tr] === 'sbass3' || trackInstruments[tr] === 'sbass4' || trackInstruments[tr] === 'stab' || trackInstruments[tr] === 'sstring' || trackInstruments[tr] === 'sleg' || trackInstruments[tr] === 'sparkle' || trackInstruments[tr] === 'rhodes' || trackInstruments[tr] === 'rhodes2') {
+  if (trackInstruments[tr] === 'sbass' || trackInstruments[tr] === 'sbass3' || trackInstruments[tr] === 'sbass4' || trackInstruments[tr] === 'stab' || trackInstruments[tr] === 'sstring' || trackInstruments[tr] === 'sleg' || trackInstruments[tr] === 'sparkle' || trackInstruments[tr] === 'rhodes' || trackInstruments[tr] === 'rhodes2' || trackInstruments[tr] === 'sflute' || trackInstruments[tr] === 'satk') {
     randomizeBassTrack(tr, level); return;
   }
 
