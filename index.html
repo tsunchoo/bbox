@@ -10,7 +10,7 @@
   --bg: #f5f0e8; --panel: #ede8df; --border: #b0a898;
   --text: #1e1e1e; --dim: #999; --soft: #666;
   --playhead: #ff2200; --muted-bg: #ff2200;
-  --slot-saved: #7ecf3a; --slot-loaded: #ff2200;
+  --slot-saved: #ffac00; --slot-loaded: #ff2200;
   --vol-fill: #ffac00;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -82,7 +82,7 @@ header .sub { font-size: 0.44rem; color: var(--dim); letter-spacing: 2px; text-t
 @keyframes rec-pump { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
 #saveBtn, #randBtn { touch-action: none; }
 @keyframes rec-icon-pulse { from { filter: brightness(0) invert(1) sepia(1) saturate(20) hue-rotate(330deg) brightness(1.5); } to { filter: brightness(0) invert(1) sepia(1) saturate(20) hue-rotate(330deg) brightness(0.5); } }
-.btn-flash { background: var(--slot-saved) !important; color: #000 !important; border: none !important; transition: none !important; }
+.btn-flash { background: var(--slot-saved) !important; color: #111 !important; border: none !important; transition: none !important; }
 .btn-flash-blue { background: #0468f4 !important; color: #fff !important; border: none !important; transition: none !important; }
 .rand-overlay-btn {
   font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 700;
@@ -266,15 +266,16 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 /* teeth — positioned so bottom edge sits exactly on the lane border */
 .step-cell::before {
   content: ''; position: absolute; bottom: -3px; left: -1px;
-  width: 3px; background: var(--bg); height: calc(30% + 3px); pointer-events: none;
+  width: 3px; background: var(--text); height: calc(30% + 3px); pointer-events: none;
   z-index: 1;
 }
 /* beat markers taller */
+.step-cell[data-step="0"]::before,
 .step-cell[data-step="4"]::before,
 .step-cell[data-step="8"]::before,
-.step-cell[data-step="12"]::before { height: calc(55% + 3px); }
+.step-cell[data-step="12"]::before { height: calc(100% + 3px); }
 /* step 0 uses the lane's left border */
-.step-cell[data-step="0"]::before { display: none; }
+/* step 0 marker now visible like all others */
 
 .step-cell::after {
   content: '';
@@ -324,7 +325,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 .slot-btn.loaded.beat-pulse { animation: slot-pulse 0.12s ease-out; }
 @keyframes slot-pulse { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
 #playBtn.btn-beat-pulse, #beatBtn.btn-beat-pulse { animation: slot-pulse 0.12s ease-out; }
-.slot-btn:active { opacity: 0.7; }
+.slot-btn:active { background: var(--slot-saved) !important; color: #111 !important; opacity: 1; }
 
 #loadingOverlay {
   position: fixed; inset: 0; background: var(--bg);
@@ -1029,7 +1030,8 @@ function transposeRootToRange(root, roots) {
 function getRangeRoots(key) {
   if (key === 'sparkle') return SPARKLE_ROOTS;
   if (key === 'sflute') return HIGH_ROOTS;
-  if (key === 'sstring' || key === 'sleg' || key === 'rhodes' || key === 'rhodes2' || key === 'stab') return MELODY_ROOTS;
+  if (key === 'stab') return MID_ROOTS;
+  if (key === 'sstring' || key === 'sleg' || key === 'rhodes' || key === 'rhodes2') return MELODY_ROOTS;
   return BASS_ROOTS;
 }
 
