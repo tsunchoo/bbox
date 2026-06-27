@@ -644,6 +644,10 @@ function scheduler() {
       }
       if (snap.bpm) bpm = snap.bpm;
       if (snap.masterVol !== undefined) setMasterVol(snap.masterVol);
+      if (snap.beatPlaying !== undefined) {
+        beatPlaying = snap.beatPlaying;
+        _beatPending = false;
+      }
       activeSlot = pi;
       // Defer all DOM updates to next frame
       requestAnimationFrame(() => {
@@ -659,6 +663,9 @@ function scheduler() {
         }
         document.getElementById('bpmVal').textContent = bpm;
         document.getElementById('bpmSlider').value = bpm;
+        const bb = document.getElementById('beatBtn');
+        if (bb) bb.classList.toggle('active', beatPlaying);
+        updateBeatPulse();
         updateSlotButtons();
       });
     }
