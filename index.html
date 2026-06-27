@@ -551,24 +551,6 @@ function getSynthConnectNode(tr) {
     ? (fxOn ? trackFxNodes[tr].fxSend : trackFxNodes[tr].dryGain)
     : ((tr !== undefined && trackGainNodes[tr]) ? trackGainNodes[tr] : masterGain);
 
-  // If verb is active, return a convolver wired to baseNode
-  if (tr !== undefined && trackSweep[tr] > 0 && ctx) {
-    const verbLevel = trackSweep[tr];
-    const dryGain = ctx.createGain(); dryGain.gain.value = 0.6;
-    const input = ctx.createGain(); input.gain.value = 1;
-    input.connect(dryGain); dryGain.connect(baseNode);
-    const delayTimes = [[0.03, 0.05, 0.07], [0.08, 0.15, 0.25], [0.2, 0.4, 0.7]];
-    const wetVol = verbLevel === 1 ? 0.5 : verbLevel === 2 ? 0.45 : 0.4;
-    const feedback = verbLevel === 1 ? 0 : verbLevel === 2 ? 0.3 : 0.5;
-    delayTimes[verbLevel - 1].forEach((dt, i) => {
-      const delay = ctx.createDelay(2.0); delay.delayTime.value = dt;
-      const dGain = ctx.createGain(); dGain.gain.value = wetVol * Math.pow(0.6, i);
-      input.connect(delay); delay.connect(dGain); dGain.connect(baseNode);
-      if (feedback > 0) { dGain.connect(delay); }
-    });
-    return input;
-  }
-
   return baseNode;
 }
 
@@ -594,21 +576,7 @@ function playBuffer(key, isAccent, time, tr) {
   const src = ctx.createBufferSource(); src.buffer = buf;
   const instrumentGain = ctx.createGain();
   instrumentGain.gain.value = (key === 'shak') ? 0.5 : (key === 'clap') ? 0.354 : (key === 'tamb') ? 0.794 : (key === 'guiro') ? 0.355 : (key === 'congHi' || key === 'congLo' || key === 'bongHi' || key === 'bongLo') ? 0.631 : 1.0;
-  // V: verb button — delay-based reverb (3 taps)
-  if (tr !== undefined && trackSweep[tr] > 0) {
-    const verbLevel = trackSweep[tr];
-    const verbDest = (tr !== undefined && trackGainNodes[tr]) ? trackGainNodes[tr] : masterGain;
-    // delay times: gate=short tight, room=medium, hall=long
-    const delayTimes = [[0.03, 0.05, 0.07], [0.08, 0.15, 0.25], [0.2, 0.4, 0.7]];
-    const wetVol = verbLevel === 1 ? 0.5 : verbLevel === 2 ? 0.45 : 0.4;
-    const feedback = verbLevel === 1 ? 0 : verbLevel === 2 ? 0.3 : 0.5;
-    delayTimes[verbLevel - 1].forEach((dt, i) => {
-      const delay = ctx.createDelay(2.0); delay.delayTime.value = dt;
-      const dGain = ctx.createGain(); dGain.gain.value = wetVol * Math.pow(0.6, i);
-      src.connect(delay); delay.connect(dGain); dGain.connect(verbDest);
-      if (feedback > 0) { dGain.connect(delay); } // feedback loop
-    });
-  }
+
   const fxVal = trackFx[tr];
   const on = fxVal && (fxVal.x > 0 || fxVal.y > 0);
   if (tr !== undefined && trackFxNodes[tr] && on) {
@@ -629,7 +597,7 @@ const trackInstruments = ['shak','sleg','sparkle','sbass3','congHi','congLo'];
 const grid        = Array.from({length: NUM_TRACKS}, () => new Array(NUM_STEPS).fill(0));
 const trackOffset = new Array(NUM_TRACKS).fill(0);
 const trackMuted  = new Array(NUM_TRACKS).fill(false);
-const trackSweep  = new Array(NUM_TRACKS).fill(0); // 0=off,1=gate,2=room,3=hall
+const trackSweep  = new Array(NUM_TRACKS).fill(false); // L button toggle
 const trackChop   = new Array(NUM_TRACKS).fill(false);
 const trackVolume = [0.5, 0.5, 0.5, 0.5, 0.5, 0.5];
 const trackFx = Array.from({length: NUM_TRACKS}, () => ({ x: 0, y: 0 }));
@@ -670,7 +638,7 @@ function scheduler() {
         }
         if (snap.trackFx) { trackFx[tr] = snap.trackFx[tr] || {x:0,y:0}; setFxActive(tr, trackFx[tr]); }
         if (snap.trackFxMode) trackFxMode[tr] = snap.trackFxMode[tr] || 0;
-        if (snap.trackSweep !== undefined) trackSweep[tr] = snap.trackSweep[tr] || 0;
+        if (snap.trackSweep !== undefined) trackSweep[tr] = !!snap.trackSweep[tr];
         if (snap.trackChop)  trackChop[tr]  = snap.trackChop[tr]  || false;
         if (snap.trackRLevel) trackRLevel[tr] = snap.trackRLevel[tr] ?? 0;
       }
@@ -684,7 +652,7 @@ function scheduler() {
           const tb = document.getElementById(`tbtn-${tr}`);
           if (tb) { tb.textContent = INSTRUMENTS[trackInstruments[tr]]?.name||(tr+1); tb.classList.toggle('muted', trackMuted[tr]); setTrackNameColor(tr, trackInstruments[tr]); }
           const sb = document.getElementById(`swpbtn-${tr}`);
-          if (sb) { const tonal = TONAL_KEYS.has(trackInstruments[tr]); if (!tonal) { const vl = ['V','V1','V2','V3']; sb.textContent = trackSweep[tr] > 0 ? vl[trackSweep[tr]] : 'V'; } sb.classList.toggle('sweep-on', tonal ? trackChop[tr] : trackSweep[tr] > 0); }
+          if (sb) { sb.textContent = 'L'; sb.classList.toggle('sweep-on', !!trackSweep[tr]); }
           const fb = document.getElementById(`fxbtn-${tr}`); if (fb) fb.classList.toggle('on', trackFx[tr].x > 0 || trackFx[tr].y > 0);
           const row = document.getElementById(`ctrlrow-${tr}`); if (row) row.classList.toggle('row-muted', trackMuted[tr]);
           const vb = document.getElementById(`vbar-${tr}`); if (vb) { vb.classList.toggle('muted', trackMuted[tr]); const f = vb.querySelector('.track-vol-fill'); if (f) f.style.width = Math.round(trackVolume[tr]*100)+'%'; }
@@ -1702,8 +1670,7 @@ function selectSound(tr, k) {
   const sb = document.getElementById(`swpbtn-${tr}`);
   if (sb) {
     const tonal = TONAL_KEYS.has(k);
-    { const vl2=['V','V1','V2','V3']; sb.textContent = tonal ? 'E' : (trackSweep[tr] > 0 ? vl2[trackSweep[tr]] : 'V'); }
-    sb.classList.toggle('sweep-on', tonal ? trackChop[tr] : trackSweep[tr]);
+    sb.textContent = 'L'; sb.classList.toggle('sweep-on', !!trackSweep[tr]);
   }
   closeSoundPicker();
   markModified();
@@ -1826,29 +1793,13 @@ function buildUI() {
     fxBtn.addEventListener('touchend', e => { e.preventDefault(); toggleFxBtn(); }, { passive: false });
     ctrlRow.appendChild(fxBtn);
 
-    // Verb / E button
+    // L button — simple toggle, all tracks
     const sweepBtn = document.createElement('button'); sweepBtn.className = 'track-ctrl-icon-btn'; sweepBtn.id = `swpbtn-${tr}`;
-    const isTonal = TONAL_KEYS.has(trackInstruments[tr]);
-    const verbLabels = ['V', 'V1', 'V2', 'V3'];
-    const updateVerbBtn = () => {
-      const tonal = TONAL_KEYS.has(trackInstruments[tr]);
-      if (tonal) {
-        sweepBtn.textContent = trackChop[tr] ? 'E' : 'E';
-        sweepBtn.classList.toggle('sweep-on', trackChop[tr]);
-      } else {
-        sweepBtn.textContent = trackSweep[tr] > 0 ? verbLabels[trackSweep[tr]] : 'V';
-        sweepBtn.classList.toggle('sweep-on', trackSweep[tr] > 0);
-      }
-    };
-    updateVerbBtn();
+    sweepBtn.textContent = 'L';
+    sweepBtn.classList.toggle('sweep-on', !!trackSweep[tr]);
     sweepBtn.addEventListener('click', () => {
-      const tonal = TONAL_KEYS.has(trackInstruments[tr]);
-      if (tonal) {
-        trackChop[tr] = !trackChop[tr];
-      } else {
-        trackSweep[tr] = (trackSweep[tr] + 1) % 4;
-      }
-      updateVerbBtn();
+      trackSweep[tr] = !trackSweep[tr];
+      sweepBtn.classList.toggle('sweep-on', !!trackSweep[tr]);
       markModified();
     });
     ctrlRow.appendChild(sweepBtn);
@@ -2765,7 +2716,7 @@ function fullClear() {
     if (tb) { tb.textContent = INSTRUMENTS[trackInstruments[tr]]?.name||(tr+1); tb.classList.remove('muted','has-notes','shifting'); setTrackNameColor(tr, trackInstruments[tr]); }
     const fb = document.getElementById(`fxbtn-${tr}`); if (fb) fb.classList.remove('on');
     const sb = document.getElementById(`swpbtn-${tr}`);
-    if (sb) { sb.classList.remove('sweep-on'); const tonal = TONAL_KEYS.has(trackInstruments[tr]); sb.textContent = tonal ? 'E' : 'V'; }
+    if (sb) { sb.textContent = 'L'; sb.classList.remove('sweep-on'); }
     const rb = document.getElementById(`randbtn-${tr}`); if (rb) rb.classList.remove('pulsing');
     const cr = document.getElementById(`ctrlrow-${tr}`); if (cr) cr.classList.remove('row-muted');
     const vb = document.getElementById(`vbar-${tr}`);
@@ -2884,7 +2835,7 @@ function randAll(mode) {
     const tb = document.getElementById(`tbtn-${tr}`); if (tb) tb.textContent = INSTRUMENTS[k]?.name || k;
     setTrackNameColor(tr, k);
     const sb = document.getElementById(`swpbtn-${tr}`);
-    if (sb) { const tonal = TONAL_KEYS.has(k); sb.textContent = tonal ? 'E' : 'V'; }
+    if (sb) { sb.textContent = 'L'; sb.classList.toggle('sweep-on', !!trackSweep[tr]); }
     trackRLevel[tr] = level;
     randomizeTrack(tr);
     trackVolume[tr] = (pool[tr] === 'skick') ? 0.35 : (pool[tr] === 'guiro') ? 0.25 : (pool[tr] === 'satk') ? 0.30 : (pool[tr] === 'stab') ? 0.30 : 0.5;
@@ -3015,7 +2966,8 @@ function snapshotState() {
     globalScaleRoot,
     bpm, masterVol,
     speciesName: _currentSpecies,
-    barColor: _currentBarColor
+    barColor: _currentBarColor,
+    beatPlaying: beatPlaying
   };
 }
 function restoreState(snap) {
@@ -3034,7 +2986,7 @@ function restoreState(snap) {
     if (snap.trackSweep) { trackSweep[tr] = snap.trackSweep[tr] || false; }
     if (snap.trackChop)  { trackChop[tr]  = snap.trackChop[tr]  || false; }
     const sb=document.getElementById(`swpbtn-${tr}`);
-    if (sb) { const tonal = TONAL_KEYS.has(trackInstruments[tr]); if (!tonal) { const vl = ['V','V1','V2','V3']; sb.textContent = trackSweep[tr] > 0 ? vl[trackSweep[tr]] : 'V'; } sb.classList.toggle('sweep-on', tonal ? trackChop[tr] : trackSweep[tr] > 0); }
+    if (sb) { sb.textContent = 'L'; sb.classList.toggle('sweep-on', !!trackSweep[tr]); }
     const tb=document.getElementById(`tbtn-${tr}`);
     if(tb) {
       tb.textContent = INSTRUMENTS[trackInstruments[tr]]?.name||(tr+1);
@@ -3057,6 +3009,13 @@ function restoreState(snap) {
     _currentBarColor = snap.barColor;
     const barEl = document.querySelector('#nameDisplay')?.parentElement;
     if (barEl) barEl.style.background = _currentBarColor;
+  }
+  if (snap.beatPlaying !== undefined) {
+    beatPlaying = snap.beatPlaying;
+    _beatPending = false;
+    const bb = document.getElementById('beatBtn');
+    if (bb) bb.classList.toggle('active', beatPlaying);
+    updateBeatPulse();
   }
 }
 function markModified() {
