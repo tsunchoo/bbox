@@ -11,7 +11,7 @@
   --text: #1e1e1e; --dim: #999; --soft: #666;
   --playhead: #ff2200; --muted-bg: #ff2200;
   --slot-saved: #7ecf3a; --slot-loaded: #ff2200;
-  --vol-fill: #7ecf3a;
+  --vol-fill: #ffac00;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { overflow: hidden; overflow-x: hidden; height: 100dvh; max-height: 100dvh; }
@@ -25,7 +25,6 @@ body {
 body::before {
   content: '';
   position: fixed; inset: 0; z-index: 0; pointer-events: none;
-  background: url('boombox.jpg') no-repeat right top / contain;
   opacity: 0.16;
 }
 body > * { position: relative; z-index: 1; }
@@ -267,7 +266,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 /* teeth — positioned so bottom edge sits exactly on the lane border */
 .step-cell::before {
   content: ''; position: absolute; bottom: -3px; left: -1px;
-  width: 3px; background: var(--text); height: calc(30% + 3px); pointer-events: none;
+  width: 3px; background: var(--bg); height: calc(30% + 3px); pointer-events: none;
   z-index: 1;
 }
 /* beat markers taller */
@@ -384,7 +383,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
   <button class="btn" id="scratchBtn">RECALL</button>
   <button class="btn" id="saveBtn" onclick="onRecClick()" style="padding:0;display:flex;align-items:center;justify-content:center;"><img id="recBtnImg" src="data:image/png;base64,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" style="height:32px;width:32px;object-fit:contain;"></button>
 </div>
-<div style="width:100%;max-width:960px;display:flex;justify-content:space-between;align-items:center;padding:6px 8px;min-height:48px;margin-bottom:5px;font-family:'DM Sans',sans-serif;font-size:1.0rem;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:#111;background:#ffe033;"><span id="nameDisplay" style="flex:1;text-align:left;"></span><span id="keyDisplay" style="flex:1;text-align:center;cursor:pointer;user-select:none;-webkit-user-select:none;" title="tap to change key"></span><span id="bpmVal" style="flex:1;text-align:right;cursor:pointer;user-select:none;-webkit-user-select:none;">110 BPM</span></div>
+<div style="width:100%;max-width:960px;display:flex;justify-content:space-between;align-items:center;padding:6px 8px;min-height:48px;margin-bottom:5px;font-family:'DM Sans',sans-serif;font-size:1.0rem;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:#fff;background:#aa64a6;"><span id="nameDisplay" style="flex:1;text-align:left;"></span><span id="keyDisplay" style="flex:1;text-align:center;cursor:pointer;user-select:none;-webkit-user-select:none;" title="tap to change key"></span><span id="bpmVal" style="flex:1;text-align:right;cursor:pointer;user-select:none;-webkit-user-select:none;">110 BPM</span></div>
 
 
 
@@ -2571,8 +2570,8 @@ function updateRecBtn() {
 }
 
 
-const BAR_COLORS = ['#ffe033', '#ffd6a5', '#ffadad', '#ffc6ff', '#caffbf', '#9bf6ff', '#a0c4ff', '#fdffb6', '#f8c8c8', '#d4f1f4', '#f9e4b7', '#e8f5e9', '#fce4ec', '#f3e5f5', '#e8eaf6', '#e0f7fa', '#f1f8e9', '#fff8e1', '#fbe9e7', '#f9fbe7', '#fffde7', '#f0f4c3', '#dcedc8', '#c8e6c9', '#b2dfdb', '#b2ebf2', '#ffe0b2', '#ffccbc', '#f8bbd0', '#e1bee7', '#d1c4e9', '#c5cae9', '#e3f2fd', '#e8f5e9', '#fff9c4', '#fce4ec', '#f3e5f5', '#e8eaf6'];
-let _currentBarColor = "#ffe033";
+const BAR_COLORS = ['#aa64a6', '#bfa826', '#bfa07b', '#bf8181', '#bf94bf', '#97bf8f', '#74b8bf', '#7893bf', '#bdbf88', '#ba9696', '#9fb4b7', '#baab89', '#aeb7ae', '#bdabb1', '#b6abb7', '#aeafb8', '#a8b9bb', '#b4baae', '#bfbaa8', '#bcaead', '#babcad', '#bfbdad', '#b4b792', '#a5b196', '#96ac96', '#85a7a4', '#85b0b5', '#bfa885', '#bf998d', '#ba8c9c', '#a88ead', '#9c93ae', '#9397ae', '#aab5bd', '#aeb7ae', '#bfba93', '#bdabb1', '#b6abb7', '#aeafb8'];
+let _currentBarColor = "#aa64a6";
 const SPECIES_NAMES = ['mercury', 'venus', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'phobos', 'deimos', 'io', 'europa', 'ganymede', 'callisto', 'amalthea', 'himalia', 'titan', 'enceladus', 'mimas', 'dione', 'rhea', 'tethys', 'hyperion', 'iapetus', 'phoebe', 'titania', 'oberon', 'umbriel', 'ariel', 'miranda', 'puck', 'caliban', 'sycorax', 'triton', 'nereid', 'proteus', 'larissa', 'galatea', 'despina', 'thalassa', 'charon', 'nix', 'hydra', 'kerberos', 'styx', 'ceres', 'pluto', 'eris', 'makemake', 'haumea', 'sedna', 'orcus', 'quaoar', 'ixion', 'pallas', 'vesta', 'hygiea', 'juno', 'psyche', 'davida', 'sylvia', 'interamnia', 'bamberga', 'herculina', 'euphrosyne', 'doris', 'themis', 'cybele', 'camilla', 'halley', 'encke', 'tempel', 'hartley', 'churyumov', 'biela', 'arend', 'bennett', 'bradfield', 'hale', 'bopp', 'hyakutake', 'ikeya', 'seki', 'lovejoy', 'neowise', 'sirius', 'canopus', 'rigel', 'vega', 'capella', 'arcturus', 'aldebaran', 'spica', 'antares', 'fomalhaut', 'deneb', 'regulus', 'altair', 'betelgeuse', 'pollux', 'castor', 'procyon', 'achernar', 'acrux', 'mimosa', 'hadar', 'mizar', 'alioth', 'alcor', 'dubhe', 'merak', 'phecda', 'megrez', 'alnitak', 'alnilam', 'mintaka', 'saiph', 'bellatrix', 'alderamin', 'alpheratz', 'schedar', 'caph', 'ruchbah', 'segin', 'enif', 'sadalsuud', 'sadalmelik', 'sadachbia', 'sadalbari', 'ancha', 'shaula', 'lesath', 'alniyat', 'graffias', 'dschubba', 'fang', 'pi', 'rho', 'zubenelgenubi', 'zubeneschamali', 'zubenelhakrabi', 'andromeda', 'triangulum', 'centaurus', 'sculptor', 'fornax', 'tucana', 'carina', 'orion', 'helix', 'crab', 'ring', 'eagle', 'lagoon', 'trifid', 'rosette', 'omega', 'dumbell', 'blinking', 'eskimo', 'cat', 'owl', 'boomerang', 'hourglass', 'red', 'spider', 'butterfly', 'stingray', 'cassiopeia', 'cygnus', 'lyra', 'aquila', 'serpens', 'ophiuchus', 'hercules', 'bootes', 'corona', 'virgo', 'libra', 'scorpius', 'sagittarius', 'capricornus', 'aquarius', 'pisces', 'aries', 'taurus', 'gemini', 'cancer', 'leo', 'draco', 'ursa', 'lupus', 'ara', 'pavo', 'grus', 'phoenix', 'hydrus', 'reticulum', 'pictor', 'columba', 'lepus', 'eridanus']
 function getSpeciesName() {
   return SPECIES_NAMES[Math.floor(Math.random() * SPECIES_NAMES.length)];
@@ -3033,7 +3032,13 @@ function restoreState(snap) {
   if (snap.barColor) {
     _currentBarColor = snap.barColor;
     const barEl = document.querySelector('#nameDisplay')?.parentElement;
-    if (barEl) barEl.style.background = _currentBarColor;
+      if (barEl) {
+    barEl.style.background = _currentBarColor;
+    // Use white text on dark colors, black on light
+    const _c = _currentBarColor.replace('#',''); const _r=parseInt(_c.slice(0,2),16),_g=parseInt(_c.slice(2,4),16),_b=parseInt(_c.slice(4,6),16);
+    const _lum = 0.299*_r + 0.587*_g + 0.114*_b;
+    barEl.style.color = _lum < 140 ? '#fff' : '#111';
+  }
   }
   if (snap.beatPlaying !== undefined) {
     beatPlaying = snap.beatPlaying;
