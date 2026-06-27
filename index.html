@@ -3413,20 +3413,17 @@ function stopRecallLoop() {
   const btn = document.getElementById('scratchBtn');
   if (!btn) return;
 
-  btn.addEventListener('click', () => {
+  const doRecall = () => {
+    console.log('RECALL tapped, snap=', !!_recallSnap);
     if (_recallSnap) {
-      restoreState(_recallSnap);
+      try { restoreState(_recallSnap); console.log('RECALL restored'); }
+      catch(e) { console.error('RECALL error:', e); }
       flashBtnBlue('scratchBtn');
     }
-  });
+  };
+  btn.addEventListener('click', doRecall);
   btn.addEventListener('touchstart', e => { e.preventDefault(); }, { passive: false });
-  btn.addEventListener('touchend', e => {
-    e.preventDefault();
-    if (_recallSnap) {
-      restoreState(_recallSnap);
-      flashBtnBlue('scratchBtn');
-    }
-  }, { passive: false });
+  btn.addEventListener('touchend', e => { e.preventDefault(); doRecall(); }, { passive: false });
 })();
 
 // Key display tap — cycle through notes and scales
