@@ -3647,12 +3647,11 @@ if ('serviceWorker' in navigator) {
 
   function stopSweepImmediate() {
     if (!sweepNodes || !ctx) return;
-    const { bp, gain, noise } = sweepNodes;
-    const t = ctx.currentTime;
-    gain.gain.cancelScheduledValues(t);
-    gain.gain.setValueAtTime(gain.gain.value, t);
-    gain.gain.linearRampToValueAtTime(0, t + 0.08); // fast fade out
-    setTimeout(() => { try { noise.stop(); } catch(e) {} sweepNodes = null; }, 150);
+    const { gain, noise } = sweepNodes;
+    gain.gain.cancelScheduledValues(ctx.currentTime);
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    try { noise.stop(); } catch(e) {}
+    sweepNodes = null;
     btn.classList.remove('active');
   }
 
