@@ -3635,7 +3635,7 @@ if ('serviceWorker' in navigator) {
     bp.frequency.exponentialRampToValueAtTime(8000, t + dur);
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0, t);
-    gain.gain.linearRampToValueAtTime(0.34, t + 0.008);
+    gain.gain.linearRampToValueAtTime(0.191, t + 0.008);
     noise.connect(bp); bp.connect(gain); gain.connect(masterGain);
     noise.start(t);
     sweepNodes = { noise, bp, gain };
