@@ -3663,7 +3663,7 @@ if ('serviceWorker' in navigator) {
     if (!sweepNodes || !ctx) return;
     // Tap: ensure at least 4 beats have played
     if (sweepIsTap) {
-      const minMs = stepDuration() * 4 * 4 * 1000;
+      const minMs = stepDuration() * 4 * 1000; // one beat
       const elapsed = Date.now() - sweepStartTime;
       if (elapsed < minMs) { setTimeout(stopSweep, minMs - elapsed); return; }
     }
