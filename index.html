@@ -1764,11 +1764,11 @@ function setBeatVol(v) {
   const openOverlay = () => {
     const ov = document.getElementById('beatVolOverlay');
     ov.style.display = 'flex';
-    ov.addEventListener('click', () => { ov.style.display = 'none'; }, { once: true });
+    setTimeout(() => { ov.addEventListener('click', () => { ov.style.display = 'none'; }, { once: true }); }, 300);
   };
-  btn.addEventListener('touchstart', e => { e.preventDefault(); ht = setTimeout(() => { ht = null; openOverlay(); }, 400); }, { passive: false });
+  btn.addEventListener('touchstart', e => { e.preventDefault(); ht = setTimeout(() => { ht = null; openOverlay(); }, 600); }, { passive: false });
   btn.addEventListener('touchend', e => { e.preventDefault(); if (ht) { clearTimeout(ht); ht = null; toggleBeat(); } }, { passive: false });
-  btn.addEventListener('mousedown', () => { ht = setTimeout(() => { ht = null; openOverlay(); }, 400); });
+  btn.addEventListener('mousedown', () => { ht = setTimeout(() => { ht = null; openOverlay(); }, 600); });
   btn.addEventListener('mouseup', () => { if (ht) { clearTimeout(ht); ht = null; toggleBeat(); } });
 })();
 
