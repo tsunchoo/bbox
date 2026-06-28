@@ -131,7 +131,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
   touch-action: manipulation; transition: background 0.1s;
 }
 .track-ctrl-icon-btn.on { background: var(--playhead); color: #fff; }
-.track-ctrl-icon-btn.sweep-on { background: #5bbcb8; color: #fff; }
+.track-ctrl-icon-btn.sweep-on { background: #333; color: #fff; }
 .rand-btn.pulsing { color: #fff; animation: pulse 0.5s infinite alternate; }
 .rand-btn.rand-pending { background: var(--playhead) !important; color: #fff !important; animation: rand-pending-pulse 0.2s infinite alternate; }
 @keyframes rand-pending-pulse { from { background: var(--playhead); } to { background: #7a1000; } }
@@ -1911,6 +1911,17 @@ function buildUI() {
     nameBtn.addEventListener('touchend', e => { e.preventDefault(); if (ht) { clearTimeout(ht); ht = null; trackMuted[tr] = !trackMuted[tr]; updateTrackMute(tr); markModified(); } }, { passive: false });
     ctrlRow.appendChild(nameBtn);
 
+    // L button — lock track from RAND (far left, before offset buttons)
+    const sweepBtnL = document.createElement('button'); sweepBtnL.className = 'track-ctrl-icon-btn'; sweepBtnL.id = `swpbtn-${tr}`;
+    sweepBtnL.textContent = 'L';
+    sweepBtnL.classList.toggle('sweep-on', !!trackSweep[tr]);
+    sweepBtnL.addEventListener('click', () => {
+      trackSweep[tr] = !trackSweep[tr];
+      sweepBtnL.classList.toggle('sweep-on', !!trackSweep[tr]);
+      markModified();
+    });
+    ctrlRow.appendChild(sweepBtnL);
+
     // Shift left
     const btnL = document.createElement('button'); btnL.className = 'shift-btn'; btnL.textContent = '<';
     wireShiftButton(btnL, tr, -1);
@@ -1939,15 +1950,7 @@ function buildUI() {
     ctrlRow.appendChild(fxBtn);
 
     // L button — simple toggle, all tracks
-    const sweepBtn = document.createElement('button'); sweepBtn.className = 'track-ctrl-icon-btn'; sweepBtn.id = `swpbtn-${tr}`;
-    sweepBtn.textContent = 'L';
-    sweepBtn.classList.toggle('sweep-on', !!trackSweep[tr]);
-    sweepBtn.addEventListener('click', () => {
-      trackSweep[tr] = !trackSweep[tr];
-      sweepBtn.classList.toggle('sweep-on', !!trackSweep[tr]);
-      markModified();
-    });
-    ctrlRow.appendChild(sweepBtn);
+
 
     // R button — randomize notes across the track, regenerating every 4 bars while held
     const randBtn = document.createElement('button'); randBtn.className = 'track-ctrl-icon-btn rand-btn'; randBtn.id = `randbtn-${tr}`;
