@@ -3614,6 +3614,7 @@ if ('serviceWorker' in navigator) {
   const btn = document.getElementById('clearBtn');
   if (!btn) return;
   let sweepNodes = null, sweepStartTime = 0, sweepIsTap = false;
+  let _activeSweepNoise = null, _activeSweepGain = null;
   let holdTimer = null;
   let didHold = false;
 
@@ -3641,16 +3642,18 @@ if ('serviceWorker' in navigator) {
     noise.connect(bp); bp.connect(gain); gain.connect(masterGain);
     noise.start(t);
     sweepNodes = { noise, bp, gain };
+    _activeSweepNoise = noise; _activeSweepGain = gain;
     sweepStartTime = Date.now();
     btn.classList.add('active');
   }
 
   function stopSweepImmediate() {
-    if (!sweepNodes || !ctx) return;
-    const { gain, noise } = sweepNodes;
-    gain.gain.cancelScheduledValues(ctx.currentTime);
-    gain.gain.setValueAtTime(0, ctx.currentTime);
-    try { noise.stop(); } catch(e) {}
+    if (_activeSweepGain && ctx) {
+      _activeSweepGain.gain.cancelScheduledValues(ctx.currentTime);
+      _activeSweepGain.gain.setValueAtTime(0, ctx.currentTime);
+    }
+    if (_activeSweepNoise) { try { _activeSweepNoise.stop(); } catch(e) {} _activeSweepNoise = null; }
+    if (_activeSweepGain) { try { _activeSweepGain.disconnect(); } catch(e) {} _activeSweepGain = null; }
     sweepNodes = null;
     btn.classList.remove('active');
   }
