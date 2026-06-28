@@ -3613,7 +3613,7 @@ if ('serviceWorker' in navigator) {
 (function() {
   const btn = document.getElementById('clearBtn');
   if (!btn) return;
-  let sweepNodes = null;
+  let sweepNodes = null, sweepStartTime = 0, sweepIsTap = false;
   let holdTimer = null;
   let didHold = false;
 
@@ -3641,11 +3641,32 @@ if ('serviceWorker' in navigator) {
     noise.connect(bp); bp.connect(gain); gain.connect(masterGain);
     noise.start(t);
     sweepNodes = { noise, bp, gain };
+    sweepStartTime = Date.now();
     btn.classList.add('active');
+  }
+
+  function stopSweepImmediate() {
+    if (!sweepNodes || !ctx) return;
+    const { bp, gain, noise } = sweepNodes;
+    const t = ctx.currentTime;
+    const quarterNote = stepDuration() * 4;
+    bp.frequency.cancelScheduledValues(t);
+    bp.frequency.exponentialRampToValueAtTime(200, t + quarterNote);
+    gain.gain.cancelScheduledValues(t);
+    gain.gain.setValueAtTime(gain.gain.value, t);
+    gain.gain.linearRampToValueAtTime(0, t + quarterNote);
+    setTimeout(() => { try { noise.stop(); } catch(e) {} sweepNodes = null; }, quarterNote * 1000 + 100);
+    btn.classList.remove('active');
   }
 
   function stopSweep() {
     if (!sweepNodes || !ctx) return;
+    // Tap: ensure at least 4 beats have played
+    if (sweepIsTap) {
+      const minMs = stepDuration() * 4 * 4 * 1000;
+      const elapsed = Date.now() - sweepStartTime;
+      if (elapsed < minMs) { setTimeout(stopSweep, minMs - elapsed); return; }
+    }
     const { bp, gain, noise } = sweepNodes;
 
     const t = ctx.currentTime;
@@ -3662,6 +3683,7 @@ if ('serviceWorker' in navigator) {
 
   const onDown = () => {
     didHold = false;
+    sweepIsTap = false;
     holdTimer = setTimeout(() => {
       didHold = true;
       startSweep();
@@ -3669,8 +3691,17 @@ if ('serviceWorker' in navigator) {
   };
 
   const onUp = () => {
-    clearTimeout(holdTimer); holdTimer = null;
-    if (sweepNodes) stopSweep();
+    if (holdTimer) {
+      // Released before hold threshold — treat as tap, start sweep for 4 beats
+      clearTimeout(holdTimer); holdTimer = null;
+      sweepIsTap = true;
+      startSweep();
+      stopSweep(); // will delay 4 beats internally
+    } else if (sweepNodes) {
+      // Released after hold — stop immediately (no minimum)
+      sweepIsTap = false;
+      stopSweepImmediate();
+    }
     didHold = false;
   };
 
