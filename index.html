@@ -1591,7 +1591,7 @@ const _boogGlide = {};
 function playBoog(freq, durSec, isAccent, time, tr) {
   if (!ctx || !freq) return;
   const dest = getSynthConnectNode(tr);
-  const vel = isAccent ? 0.011 : 0.007;
+  const vel = isAccent ? 0.0055 : 0.0035;
 
   const prevFreq = _boogGlide[tr] || freq;
   _boogGlide[tr] = freq;
@@ -2980,11 +2980,15 @@ function randAll(mode) {
   } else {
     // Equal chance: pick 3 tonal and 3 perc, then shuffle
     // Always include one bass in tonal selection
+    // Always pick a bass — from unlocked first, fall back to any bass if all locked
     const bassAvail = tonalKeys.filter(k => bassKeys.has(k));
+    const allBassKeys = Object.keys(INSTRUMENTS).filter(k => bassKeys.has(k));
+    const bassChoice = bassAvail.length > 0
+      ? bassAvail[Math.floor(Math.random() * bassAvail.length)]
+      : allBassKeys[Math.floor(Math.random() * allBassKeys.length)];
     const nonBassAvail = tonalKeys.filter(k => !bassKeys.has(k));
-    const chosenBass = bassAvail.length > 0 ? [bassAvail[Math.floor(Math.random() * bassAvail.length)]] : [];
-    const nonBassShuffle = [...nonBassAvail].sort(() => Math.random() - 0.5).slice(0, 3 - chosenBass.length);
-    const tPool = [...chosenBass, ...nonBassShuffle];
+    const nonBassShuffle = [...nonBassAvail].sort(() => Math.random() - 0.5).slice(0, 2);
+    const tPool = [bassChoice, ...nonBassShuffle];
 
     const pShuffle = [...percKeys].sort(() => Math.random() - 0.5);
     const pPool = buildPool(pShuffle);
