@@ -368,7 +368,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 05:27</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 05:52</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -486,6 +486,13 @@ function updateMasterVolCells() {
 // setupMasterVolBar called after buildUI at bottom of script
 const buffers = {};
 
+function playUiSound(name) {
+  if (!ctx || !window._uiSoundBufs || !window._uiSoundBufs[name]) return;
+  const src = ctx.createBufferSource(); src.buffer = window._uiSoundBufs[name];
+  const g = ctx.createGain(); g.gain.value = 0.7;
+  src.connect(g); g.connect(masterGain);
+  src.start();
+}
 function resumeCtx() { if (ctx && ctx.state !== 'running') ctx.resume(); }
 document.addEventListener('touchstart', resumeCtx, false);
 document.addEventListener('touchend',   resumeCtx, false);
@@ -868,6 +875,7 @@ function updateBeatPulse() {
 
 function togglePlay() {
   if (ctx) ctx.resume();
+  playUiSound('play');
   playing = !playing;
   const btn = document.getElementById('playBtn');
   if (playing) {
@@ -1793,6 +1801,8 @@ function setBeatVol(v) {
 })();
 
 function toggleBeat() {
+  playUiSound('click');
+  playUiSound('click');
   if (ctx) ctx.resume();
   const btn = document.getElementById('beatBtn');
   if (beatPlaying || _beatPending) {
@@ -2771,6 +2781,8 @@ function getKeyName() {
 function onRecClick() { toggleRecord(); }
 
 function toggleRecord() {
+  playUiSound('play');
+  playUiSound('play');
   if (!ctx) { alert('Start playback first'); return; }
 
   // If already armed/recording — stop and share
@@ -2964,7 +2976,7 @@ let randAllLevel = 0;
 
 let _randHeld = false;
 function handleRandTap() {
-  if (!_randHeld) { flashBtnBlue('randBtn'); queueRand(); }
+  if (!_randHeld) { playUiSound('click'); flashBtnBlue('randBtn'); queueRand(); }
   _randHeld = false;
 }
 
@@ -3622,6 +3634,12 @@ async function initAudio() {
     attachCtxStateWatch();
     masterGain = ctx.createGain(); masterGain.gain.value = masterVol;
     window._beatGain = ctx.createGain(); window._beatGain.gain.value = 0.75; window._beatGain.connect(masterGain);
+    // UI Sounds
+    const _uiSoundBufs = {};
+    window._uiSoundBufs = _uiSoundBufs;
+    ['click','play','rewind'].forEach(name => {
+      fetch(`Sounds/${name}.wav`).then(r => r.arrayBuffer()).then(buf => ctx.decodeAudioData(buf, decoded => { _uiSoundBufs[name] = decoded; })).catch(()=>{});
+    });
     window.masterLimiter = ctx.createDynamicsCompressor(); const masterLimiter = window.masterLimiter;
     masterLimiter.threshold.value = -1;
     masterLimiter.knee.value = 0;
@@ -3719,7 +3737,7 @@ if ('serviceWorker' in navigator) {
     setTimeout(() => { try { noise.stop(); } catch(e) {} }, quarterNote * 1000 + 100);
   }
 
-  btn.addEventListener('touchstart', e => { e.preventDefault(); startSweep(); }, { passive: false });
+  btn.addEventListener('touchstart', e => { e.preventDefault(); playUiSound('click'); startSweep(); }, { passive: false });
   btn.addEventListener('touchend', e => {
     e.preventDefault();
     const minMs = stepDuration() * 1000; // one 16th note
@@ -3797,6 +3815,8 @@ function stopRecallLoop() {
   if (!btn) return;
 
   const doRecall = () => {
+      const doRecall = () => {
+    playUiSound('rewind');
     if (_recallSnap) {
       // Spin reels backwards for one bar then restore
       document.querySelectorAll('.reel-wrap').forEach(r => {
