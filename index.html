@@ -368,7 +368,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 20:33</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 20:43</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -491,7 +491,8 @@ const buffers = {};
 function playUiSound(name) {
   if (!ctx || !window._uiSoundBufs || !window._uiSoundBufs[name]) return;
   const src = ctx.createBufferSource(); src.buffer = window._uiSoundBufs[name];
-  const g = ctx.createGain(); g.gain.value = 0.7;
+  src.playbackRate.value = name === 'rewind' ? 1.5 : 1.0; // rewind plays faster
+  const g = ctx.createGain(); g.gain.value = name === 'rewind' ? 0.496 : 0.7; // rewind -3dB
   src.connect(g); g.connect(masterGain);
   src.start();
 }
@@ -1656,7 +1657,7 @@ function playForestFlute(freq, durSec, isAccent, time, tr) {
 function playBlunt(freq, durSec, isAccent, time, tr) {
   if (!ctx || !freq) return;
   const dest = getSynthConnectNode(tr);
-  const vel = isAccent ? 0.18 : 0.12;
+  const vel = isAccent ? 0.114 : 0.076;
   const tail = 2.0;
   [-8, 8].forEach(det => {
     const osc = ctx.createOscillator(); osc.type = 'sawtooth';
