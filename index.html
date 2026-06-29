@@ -368,7 +368,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 06:16</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 06:23</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -884,7 +884,7 @@ function updateBeatPulse() {
 
 function togglePlay() {
   if (ctx) ctx.resume();
-  playUiSound('play');
+  playUiSound(playing ? 'clickoff' : 'play');
   playing = !playing;
   const btn = document.getElementById('playBtn');
   if (playing) {
@@ -1749,37 +1749,39 @@ function playSynthAttack(freq, durSec, isAccent, time, tr) {
 const _micBuffers = {}; // tr → array of AudioBuffers (slices)
 const _micRecording = {}; // tr → boolean
 
-async function startMicRecord(tr) {
+let _micMediaRecorder = null;
+
+async function _micStartRecord(tr) {
   if (_micRecording[tr]) return;
   try {
     const stream = window._micStream || await navigator.mediaDevices.getUserMedia({ audio: true });
     window._micStream = stream;
     const chunks = [];
-    const rec = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-    rec.ondataavailable = e => chunks.push(e.data);
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+    const rec = new MediaRecorder(stream, { mimeType });
+    _micMediaRecorder = rec;
+    rec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
     rec.onstop = async () => {
-      const blob = new Blob(chunks, { type: 'audio/webm' });
-      const arrayBuf = await blob.arrayBuffer();
-      const audioBuf = await ctx.decodeAudioData(arrayBuf);
-      // Slice into up to 8 equal regions, trim silence
-      const slices = sliceBuffer(audioBuf, 8);
-      _micBuffers[tr] = slices;
+      try {
+        const blob = new Blob(chunks, { type: mimeType });
+        const arrayBuf = await blob.arrayBuffer();
+        const audioBuf = await ctx.decodeAudioData(arrayBuf);
+        const slices = sliceBuffer(audioBuf, 8);
+        _micBuffers[tr] = slices;
+      } catch(e) { console.error('Mic decode failed:', e); }
       _micRecording[tr] = false;
-      // Restore main output
-      if (masterGain && ctx) masterGain.gain.setTargetAtTime(masterVol, ctx.currentTime, 0.05);
-      // Update R button back to normal
-      const rb = document.getElementById(`randbtn-${tr}`);
-      if (rb) { rb.textContent = 'R'; rb.style.background = ''; rb.style.color = ''; }
+      _micMediaRecorder = null;
     };
     _micRecording[tr] = true;
-    // Duck main output -10dB during recording
-    if (masterGain && ctx) masterGain.gain.setTargetAtTime(masterGain.gain.value * 0.316, ctx.currentTime, 0.05);
-    // Flash R button red while recording
-    const rb = document.getElementById(`randbtn-${tr}`);
-    if (rb) { rb.textContent = '●'; rb.style.background = '#c0392b'; rb.style.color = '#fff'; }
-    rec.start();
-    setTimeout(() => { if (rec.state === 'recording') rec.stop(); }, 3000); // 3s max
-  } catch(e) { console.error('Mic record failed:', e); }
+    rec.start(100); // collect in 100ms chunks
+  } catch(e) { console.error('Mic record failed:', e); _micRecording[tr] = false; }
+}
+
+function _micStopRecord(tr) {
+  if (_micMediaRecorder && _micMediaRecorder.state === 'recording') {
+    _micMediaRecorder.stop();
+  }
+  _micRecording[tr] = false;
 }
 
 function sliceBuffer(buf, n) {
@@ -2042,11 +2044,35 @@ function buildUI() {
     setTrackNameColor(tr, trackInstruments[tr]);
     nameBtn.classList.toggle('muted', trackMuted[tr]);
     let ht = null;
-    nameBtn.addEventListener('mousedown', () => { ht = setTimeout(() => { ht = null; openSoundPicker(tr); }, 400); });
-    nameBtn.addEventListener('mouseup', () => { if (ht) { clearTimeout(ht); ht = null; trackMuted[tr] = !trackMuted[tr]; updateTrackMute(tr); markModified(); } });
+    const onNameDown = () => {
+      if (trackInstruments[tr] === 'mic') {
+        // MIC track: hold to record — colour entire ctrl row
+        ctrlRow.style.background = '#c0392b';
+        nameBtn.style.background = '#c0392b';
+        nameBtn.style.color = '#fff';
+        if (masterGain && ctx) masterGain.gain.setTargetAtTime(masterVol * 0.316, ctx.currentTime, 0.05);
+        _micStartRecord(tr);
+      } else {
+        ht = setTimeout(() => { ht = null; openSoundPicker(tr); }, 400);
+      }
+    };
+    const onNameUp = () => {
+      if (trackInstruments[tr] === 'mic') {
+        // Stop recording
+        ctrlRow.style.background = '';
+        nameBtn.style.background = '';
+        nameBtn.style.color = '';
+        if (masterGain && ctx) masterGain.gain.setTargetAtTime(masterVol, ctx.currentTime, 0.05);
+        _micStopRecord(tr);
+      } else {
+        if (ht) { clearTimeout(ht); ht = null; trackMuted[tr] = !trackMuted[tr]; updateTrackMute(tr); markModified(); }
+      }
+    };
+    nameBtn.addEventListener('mousedown', onNameDown);
+    nameBtn.addEventListener('mouseup', onNameUp);
     nameBtn.addEventListener('mouseleave', () => { clearTimeout(ht); ht = null; });
-    nameBtn.addEventListener('touchstart', e => { e.preventDefault(); ht = setTimeout(() => { ht = null; openSoundPicker(tr); }, 400); }, { passive: false });
-    nameBtn.addEventListener('touchend', e => { e.preventDefault(); if (ht) { clearTimeout(ht); ht = null; trackMuted[tr] = !trackMuted[tr]; updateTrackMute(tr); markModified(); } }, { passive: false });
+    nameBtn.addEventListener('touchstart', e => { e.preventDefault(); onNameDown(); }, { passive: false });
+    nameBtn.addEventListener('touchend', e => { e.preventDefault(); onNameUp(); }, { passive: false });
     ctrlRow.appendChild(nameBtn);
 
     // L button — lock track from RAND (far left, before offset buttons)
@@ -3685,16 +3711,7 @@ function wireRandomizeButton(btn, tr) {
 
 buildUI();
 updateMasterVolCells();
-// MIC track R button override
-document.addEventListener('click', e => {
-  const rb = e.target.closest('[id^="randbtn-"]');
-  if (!rb) return;
-  const tr = parseInt(rb.id.split('-')[1]);
-  if (trackInstruments[tr] === 'mic') {
-    e.stopImmediatePropagation();
-    startMicRecord(tr);
-  }
-}, true);
+
 // Initialise bar display
 (function() {
   const nd = document.getElementById('nameDisplay');
