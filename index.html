@@ -200,7 +200,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
   user-select: none;
 }
 .sound-option:hover { background: var(--text); color: var(--bg); }
-.sound-option.active { background: var(--text); color: var(--bg); border: none; }
+.sound-option.active { background: #ffe033; color: #111; border: none; }
 /* Instrument group colours */
 .inst-kit   { background: #1a3a6b; color: #fff; }
 .inst-perc  { background: #2a7a3a; color: #fff; }
@@ -208,7 +208,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 .inst-kit:hover   { background: #0d1f40; color: #fff; }
 .inst-perc:hover  { background: #1a5228; color: #fff; }
 .inst-tonal:hover { background: #fd475d; color: #fff; }
-.inst-kit.active, .inst-perc.active, .inst-tonal.active { background: var(--text); color: var(--bg); border: none; }
+.inst-kit.active, .inst-perc.active, .inst-tonal.active { background: #ffe033; color: #111; border: none; }
 /* Track name buttons inherit group color */
 .track-name-btn.inst-kit   { background: #1a3a6b; color: #fff; }
 .track-name-btn.inst-perc  { background: #2a7a3a; color: #fff; }
@@ -368,7 +368,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 21:05</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 21:16</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -444,6 +444,7 @@ const INSTRUMENTS = {
   skick:  { name: 'KICK',        soft: null, accent: null, group: 'kit' },
   ssnare: { name: 'SNARE',       soft: null, accent: null, group: 'kit' },
   shihat: { name: 'HIHAT',       soft: null, accent: null, group: 'kit' },
+  ride:   { name: 'RIDE',        soft: null, accent: null, group: 'kit'  },
   tamb:   { name: 'TAMB',        soft: 'Sounds/Tamb50.wav',   accent: 'Sounds/Tamb100.wav',   group: 'perc' },
   shak:   { name: 'SHAKER',      soft: 'Sounds/Shak50.wav',   accent: 'Sounds/Shak100.wav',   group: 'perc' },
   clap:   { name: 'HANDCLAP',    soft: 'Sounds/Clap50.wav',   accent: 'Sounds/Clap100.wav',   group: 'perc' },
@@ -452,7 +453,6 @@ const INSTRUMENTS = {
   bongHi: { name: 'BONGO HI',    soft: 'Sounds/BongHi50.wav', accent: 'Sounds/BongHi100.wav', group: 'perc' },
   bongLo: { name: 'BONGO LO',    soft: 'Sounds/BongLo50.wav', accent: 'Sounds/BongLo100.wav', group: 'perc' },
   ngate:  { name: 'NOISE',       soft: null, accent: null, group: 'perc'  },
-  ride:   { name: 'RIDE',        soft: null, accent: null, group: 'kit'  },
   guiro:  { name: 'GUIRO',       soft: 'Sounds/Guiro.wav', accent: 'Sounds/Guiro_Scratch.wav', group: 'perc'  },
   // cowb:   { name: 'COWBELL',     soft: 'Sounds/Cowb50.wav',   accent: 'Sounds/Cowb100.wav',   group: 'perc' },
   sbass:  { name: 'SYNTH BASS',  soft: null, accent: null, group: 'tonal' },
@@ -960,7 +960,7 @@ function playSynthKick(isAccent, time, tr) {
   osc.connect(g); g.connect(dest);
   osc.frequency.setValueAtTime(isAccent ? 180 : 140, time);
   osc.frequency.exponentialRampToValueAtTime(35, time + 0.35);
-  g.gain.setValueAtTime(isAccent ? 0.675 : 0.45, time);
+  g.gain.setValueAtTime(isAccent ? 0.478 : 0.319, time);
   g.gain.exponentialRampToValueAtTime(0.001, time + 0.45);
   osc.start(time); osc.stop(time + 0.46);
 }
@@ -1475,7 +1475,7 @@ function playPlunkBass(freq, durSec, isAccent, time, tr) {
 function playStab(freq, durSec, isAccent, time, tr) {
   if (!ctx || !freq) return;
   const dest = getSynthConnectNode(tr);
-  const vel = isAccent ? 0.246 : 0.170;
+  const vel = isAccent ? 0.098 : 0.068;
 
   // 3-oscillator detuned stack — chord-like spread
   const detunes = [-7, 0, 7, 12];
@@ -1700,7 +1700,7 @@ const _boogGlide = {};
 function playBoog(freq, durSec, isAccent, time, tr) {
   if (!ctx || !freq) return;
   const dest = getSynthConnectNode(tr);
-  const vel = isAccent ? 0.0055 : 0.0035;
+  const vel = isAccent ? 0.0039 : 0.0025;
 
   const prevFreq = _boogGlide[tr] || freq;
   _boogGlide[tr] = freq;
