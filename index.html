@@ -370,7 +370,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 23:22</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 23:27</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -3121,6 +3121,10 @@ function handleRandTap() {
 function randAll(mode) {
   mode = mode || 'all';
   const level = randAllLevel;
+  // Stop all auto-rand tracks and reset to R
+  Object.keys(autoShiftStops).forEach(tr => {
+    autoShiftStops[tr]();
+  });
   randAllLevel = (randAllLevel + 1) % 3;
   // Pick a fresh random scale and root for this randomize pass
   const scaleNames = Object.keys(SCALES);
