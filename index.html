@@ -138,7 +138,8 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 .rand-btn.pulsing { color: #fff; animation: pulse 0.5s infinite alternate; }
 .rand-btn.rand-pending { background: var(--playhead) !important; color: #fff !important; animation: rand-pending-pulse 0.2s infinite alternate; }
 @keyframes rand-pending-pulse { from { background: var(--playhead); } to { background: #7a1000; } }
-.rand-btn.rand-auto { background: var(--playhead) !important; color: #fff !important; }
+.rand-btn.rand-auto { background: #f71aff !important; color: #fff !important; }
+.track-auto-rand { --track-color: #f71aff !important; }
 #randBtn.pulsing { background: #0468f4; color: #fff; animation: rand-pulse 0.5s infinite alternate; }
 @keyframes rand-pulse { from { background: #0468f4; color: #fff; } to { background: #0247a8; color: #fff; } }
 #clearBtn.active { background: #0468f4 !important; color: #fff !important; }
@@ -368,7 +369,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 21:16</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 21:33</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -462,7 +463,7 @@ const INSTRUMENTS = {
   sstring:{ name: 'CHOIR',       soft: null, accent: null, group: 'tonal' },
   sleg:   { name: 'STRINGS+',    soft: null, accent: null, group: 'tonal' },
   sparkle:{ name: 'MUTED STR',   soft: null, accent: null, group: 'tonal' },
-  rhodes: { name: 'PIANO',       soft: null, accent: null, group: 'tonal' },
+  rhodes: { name: 'THMB PIANO',       soft: null, accent: null, group: 'tonal' },
   rhodes2:{ name: 'RHODES',      soft: null, accent: null, group: 'tonal' },
   sflute: { name: 'SYN FLUTE',   soft: null, accent: null, group: 'tonal' },
   satk:   { name: 'SYN ATTACK',  soft: null, accent: null, group: 'tonal' },
@@ -967,7 +968,7 @@ function playSynthKick(isAccent, time, tr) {
 function playSynthSnare(isAccent, time, tr) {
   if (!ctx) return;
   const dest = getSynthConnectNode(tr);
-  const dur = isAccent ? 0.28 : 0.20, vol = isAccent ? 0.65 : 0.42;
+  const dur = isAccent ? 0.28 : 0.20, vol = isAccent ? 0.460 : 0.297;
   const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
   const d = buf.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2-1) * Math.pow(1-i/d.length, 1.5);
@@ -1475,7 +1476,7 @@ function playPlunkBass(freq, durSec, isAccent, time, tr) {
 function playStab(freq, durSec, isAccent, time, tr) {
   if (!ctx || !freq) return;
   const dest = getSynthConnectNode(tr);
-  const vel = isAccent ? 0.098 : 0.068;
+  const vel = isAccent ? 0.049 : 0.034;
 
   // 3-oscillator detuned stack — chord-like spread
   const detunes = [-7, 0, 7, 12];
@@ -3667,6 +3668,7 @@ function wireRandomizeButton(btn, tr) {
     clearInterval(autoInterval); autoInterval = null;
     btn.classList.remove('rand-auto');
     delete autoShiftStops[tr];
+    const lane = document.getElementById(`lane-${tr}`); if (lane) lane.classList.remove('track-auto-rand'); if (lane) lane.style.removeProperty('--track-color'); setTrackNameColor(tr, trackInstruments[tr]);
   };
 
   // Called from scheduler on quarter note when in auto mode
