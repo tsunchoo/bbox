@@ -372,7 +372,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 07:02</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 07:05</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -1757,8 +1757,8 @@ async function _micStartRecord(tr) {
     const stream = window._micStream || await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true } });
     window._micStream = stream;
 
-    // Permission granted — check user is still holding (didn't release before permission granted)
-    if (!_micRecording[tr] && _micRecording[tr] !== 'pending') return; // released already
+    // Permission granted — check user is still holding
+    if (_micRecording[tr] === false) return; // released before permission granted
     // Duck and show recording state
     if (masterGain && ctx) { masterGain.gain.cancelScheduledValues(ctx.currentTime); masterGain.gain.setTargetAtTime(masterVol * 0.178, ctx.currentTime, 0.05); }
     const ctrlR = document.getElementById(`ctrlrow-${tr}`);
