@@ -3676,7 +3676,7 @@ if ('serviceWorker' in navigator) {
   function startSweep() {
     if (!ctx || sweepNodes) return;
     ctx.resume();
-    const dur = stepDuration() * 8; // twice as fast
+    const dur = stepDuration() * 16; // full sweep duration
     const t = ctx.currentTime;
     const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * (dur + 1)), ctx.sampleRate);
     const d = buf.getChannelData(0);
