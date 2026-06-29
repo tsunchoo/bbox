@@ -372,7 +372,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 06:57</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 07:02</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -1757,7 +1757,9 @@ async function _micStartRecord(tr) {
     const stream = window._micStream || await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true } });
     window._micStream = stream;
 
-    // Permission granted — now duck and show recording state
+    // Permission granted — check user is still holding (didn't release before permission granted)
+    if (!_micRecording[tr] && _micRecording[tr] !== 'pending') return; // released already
+    // Duck and show recording state
     if (masterGain && ctx) { masterGain.gain.cancelScheduledValues(ctx.currentTime); masterGain.gain.setTargetAtTime(masterVol * 0.178, ctx.currentTime, 0.05); }
     const ctrlR = document.getElementById(`ctrlrow-${tr}`);
     const nb = document.getElementById(`tbtn-${tr}`);
@@ -1793,6 +1795,11 @@ function _micStopRecord(tr) {
     _micMediaRecorder.stop();
   }
   _micRecording[tr] = false;
+  // Release mic stream so iOS returns audio session to playback mode (restores Bluetooth)
+  if (window._micStream) {
+    window._micStream.getTracks().forEach(t => t.stop());
+    window._micStream = null;
+  }
 }
 
 function sliceBuffer(buf, n) {
@@ -2064,7 +2071,8 @@ function buildUI() {
     let ht = null;
     const onNameDown = () => {
       if (trackInstruments[tr] === 'mic') {
-        // MIC track: hold to record — _micStartRecord handles duck/color after permission
+        // MIC track: set pending so we can cancel if released before permission granted
+        _micRecording[tr] = 'pending';
         _micStartRecord(tr);
       } else {
         ht = setTimeout(() => { ht = null; openSoundPicker(tr); }, 400);
@@ -2072,6 +2080,7 @@ function buildUI() {
     };
     const onNameUp = () => {
       if (trackInstruments[tr] === 'mic') {
+        _micRecording[tr] = false; // cancel pending if permission not yet granted
         // Stop recording
         ctrlRow.style.background = '';
         nameBtn.style.background = '';
