@@ -368,7 +368,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 02:47</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 03:52</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -1774,19 +1774,22 @@ function setBeatVol(v) {
 (function() {
   const btn = document.getElementById('beatBtn');
   if (!btn) return;
-  // Remove onclick
   btn.removeAttribute('onclick');
-  let ht = null, didHold = false;
-  const openOverlay = () => {
-    didHold = true;
-    const ov = document.getElementById('beatVolOverlay');
-    ov.style.display = 'flex';
-    setTimeout(() => { ov.addEventListener('click', () => { ov.style.display = 'none'; }, { once: true }); }, 400);
-  };
-  btn.addEventListener('touchstart', e => { e.preventDefault(); didHold = false; ht = setTimeout(openOverlay, 600); }, { passive: false });
-  btn.addEventListener('touchend', e => { e.preventDefault(); clearTimeout(ht); ht = null; didHold = false; }, { passive: false });
-  btn.addEventListener('touchcancel', () => { clearTimeout(ht); ht = null; didHold = false; });
-  btn.addEventListener('click', () => { if (!didHold) toggleBeat(); });
+  let pressStart = 0;
+  btn.addEventListener('touchstart', e => { e.preventDefault(); pressStart = Date.now(); }, { passive: false });
+  btn.addEventListener('touchend', e => {
+    e.preventDefault();
+    const held = Date.now() - pressStart;
+    if (held >= 600) {
+      // Long press — open overlay
+      const ov = document.getElementById('beatVolOverlay');
+      ov.style.display = 'flex';
+      setTimeout(() => { ov.addEventListener('click', () => { ov.style.display = 'none'; }, { once: true }); }, 300);
+    } else {
+      // Short tap — toggle
+      toggleBeat();
+    }
+  }, { passive: false });
 })();
 
 function toggleBeat() {
