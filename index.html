@@ -1784,8 +1784,9 @@ function setBeatVol(v) {
     setTimeout(() => { ov.addEventListener('click', () => { ov.style.display = 'none'; }, { once: true }); }, 400);
   };
   btn.addEventListener('touchstart', e => { e.preventDefault(); didHold = false; ht = setTimeout(openOverlay, 600); }, { passive: false });
-  btn.addEventListener('touchend', e => { e.preventDefault(); clearTimeout(ht); ht = null; if (!didHold) toggleBeat(); didHold = false; }, { passive: false });
+  btn.addEventListener('touchend', e => { e.preventDefault(); clearTimeout(ht); ht = null; didHold = false; }, { passive: false });
   btn.addEventListener('touchcancel', () => { clearTimeout(ht); ht = null; didHold = false; });
+  btn.addEventListener('click', () => { if (!didHold) toggleBeat(); });
 })();
 
 function toggleBeat() {
@@ -3303,8 +3304,10 @@ function slotPress(i) {
     activeSlot = i;
     updateSlotButtons();
   } else {
-    // Playing — queue for next bar
-    _pendingSlot = i;
+    // Playing — restore immediately like RECALL
+    _pendingSlot = -1;
+    restoreState(slots[i]);
+    activeSlot = i;
     updateSlotButtons();
   }
 }
@@ -3714,7 +3717,13 @@ if ('serviceWorker' in navigator) {
   }
 
   btn.addEventListener('touchstart', e => { e.preventDefault(); startSweep(); }, { passive: false });
-  btn.addEventListener('touchend', e => { e.preventDefault(); stopSweep(); }, { passive: false });
+  btn.addEventListener('touchend', e => {
+    e.preventDefault();
+    const minMs = stepDuration() * 1000; // one 16th note
+    const elapsed = Date.now() - (window._sweepStartMs || 0);
+    if (elapsed < minMs) setTimeout(stopSweep, minMs - elapsed);
+    else stopSweep();
+  }, { passive: false });
   btn.addEventListener('touchcancel', stopSweep);
   btn.addEventListener('mousedown', startSweep);
   btn.addEventListener('mouseup', stopSweep);
