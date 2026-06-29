@@ -203,14 +203,18 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 .sound-option.active { background: var(--text); color: var(--bg); border: none; }
 /* Instrument group colours */
 .inst-kit   { background: #1a3a6b; color: #fff; }
+.inst-mic   { background: #ffe033; color: #111; }
 .inst-perc  { background: #2a7a3a; color: #fff; }
 .inst-tonal { background: #fd475d; color: #fff; }
 .inst-kit:hover   { background: #0d1f40; color: #fff; }
+.inst-mic:hover   { background: #e6ca00; color: #111; }
 .inst-perc:hover  { background: #1a5228; color: #fff; }
 .inst-tonal:hover { background: #fd475d; color: #fff; }
 .inst-kit.active, .inst-perc.active, .inst-tonal.active { background: var(--text); color: var(--bg); border: none; }
 /* Track name buttons inherit group color */
 .track-name-btn.inst-kit   { background: #1a3a6b; color: #fff; }
+.track-name-btn.inst-mic   { background: #ffe033; color: #111; }
+.inst-mic   { background: #ffe033; color: #111; }
 .track-name-btn.inst-perc  { background: #2a7a3a; color: #fff; }
 .track-name-btn.inst-tonal { background: #fd475d; color: #fff; }
 .track-name-btn.has-notes.inst-kit   { background: #1a3a6b; }
@@ -368,7 +372,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 06:43</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 06:50</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -444,6 +448,7 @@ const INSTRUMENTS = {
   skick:  { name: 'KICK',        soft: null, accent: null, group: 'kit' },
   ssnare: { name: 'SNARE',       soft: null, accent: null, group: 'kit' },
   shihat: { name: 'HIHAT',       soft: null, accent: null, group: 'kit' },
+  ride:   { name: 'RIDE',        soft: null, accent: null, group: 'kit' },
   tamb:   { name: 'TAMB',        soft: 'Sounds/Tamb50.wav',   accent: 'Sounds/Tamb100.wav',   group: 'perc' },
   shak:   { name: 'SHAKER',      soft: 'Sounds/Shak50.wav',   accent: 'Sounds/Shak100.wav',   group: 'perc' },
   clap:   { name: 'HANDCLAP',    soft: 'Sounds/Clap50.wav',   accent: 'Sounds/Clap100.wav',   group: 'perc' },
@@ -451,11 +456,8 @@ const INSTRUMENTS = {
   congLo: { name: 'CONGA LO',    soft: 'Sounds/CongLo50.wav', accent: 'Sounds/CongLo100.wav', group: 'perc' },
   bongHi: { name: 'BONGO HI',    soft: 'Sounds/BongHi50.wav', accent: 'Sounds/BongHi100.wav', group: 'perc' },
   bongLo: { name: 'BONGO LO',    soft: 'Sounds/BongLo50.wav', accent: 'Sounds/BongLo100.wav', group: 'perc' },
-  mic:    { name: 'MIC',         soft: null, accent: null, group: 'kit'  },
-  ngate:  { name: 'NOISE',       soft: null, accent: null, group: 'perc'  },
-  ride:   { name: 'RIDE',        soft: null, accent: null, group: 'kit'  },
-  guiro:  { name: 'GUIRO',       soft: 'Sounds/Guiro.wav', accent: 'Sounds/Guiro_Scratch.wav', group: 'perc'  },
-  // cowb:   { name: 'COWBELL',     soft: 'Sounds/Cowb50.wav',   accent: 'Sounds/Cowb100.wav',   group: 'perc' },
+  ngate:  { name: 'NOISE',       soft: null, accent: null, group: 'perc' },
+  guiro:  { name: 'GUIRO',       soft: 'Sounds/Guiro.wav', accent: 'Sounds/Guiro_Scratch.wav', group: 'perc' },
   sbass:  { name: 'SYNTH BASS',  soft: null, accent: null, group: 'tonal' },
   sbass3: { name: 'JAMES BASS',  soft: null, accent: null, group: 'tonal' },
   sbass4: { name: 'PUNK BASS',   soft: null, accent: null, group: 'tonal' },
@@ -468,6 +470,7 @@ const INSTRUMENTS = {
   sflute: { name: 'SYN FLUTE',   soft: null, accent: null, group: 'tonal' },
   satk:   { name: 'SYN ATTACK',  soft: null, accent: null, group: 'tonal' },
   boog:   { name: 'BOOG',        soft: null, accent: null, group: 'tonal' },
+  mic:    { name: 'MIC',         soft: null, accent: null, group: 'mic'  },
 };
 const INSTRUMENT_KEYS = Object.keys(INSTRUMENTS);
 let ctx = null, masterGain = null;
@@ -521,11 +524,7 @@ async function loadSamples() {
     }
   }));
   document.getElementById('loadingOverlay').classList.add('hidden');
-  // Request mic permission early
-  navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true } }).then(stream => {
-    window._micStream = stream;
-    // Keep stream alive but don't use it yet
-  }).catch(err => console.log('Mic permission denied:', err));
+  // Mic permission requested only when user taps a MIC track to record
   document.getElementById('status').textContent = '';
 }
 
@@ -1947,9 +1946,9 @@ function openSoundPicker(tr) {
 }
 function setTrackNameColor(tr, key) {
   const btn = document.getElementById(`tbtn-${tr}`); if (!btn) return;
-  btn.classList.remove('inst-kit','inst-perc','inst-tonal');
+  btn.classList.remove('inst-kit','inst-perc','inst-tonal','inst-mic');
   const g = INSTRUMENTS[key]?.group || 'perc';
-  const _laneColors = {'kit':'#1a3a6b','perc':'#2a7a3a','tonal':'#fd475d'};
+  const _laneColors = {'kit':'#1a3a6b','perc':'#2a7a3a','tonal':'#fd475d','mic':'#ffe033'};
   const lane = document.getElementById(`lane-${tr}`);
   if (lane) lane.style.setProperty('--track-color', _laneColors[g] || 'var(--text)');
   btn.classList.add('inst-' + g);
@@ -3121,7 +3120,7 @@ function randAll(mode) {
     if (trackSweep[tr]) lockedInstruments.add(trackInstruments[tr]);
   }
   // Prefer non-locked instruments but allow locked ones if category is depleted
-  const percKeysAll = Object.keys(INSTRUMENTS).filter(k => !TONAL_KEYS.has(k) && !(k === 'guiro' && Math.random() < 0.5));
+  const percKeysAll = Object.keys(INSTRUMENTS).filter(k => !TONAL_KEYS.has(k) && k !== 'mic' && !(k === 'guiro' && Math.random() < 0.5));
   const tonalKeysAll = Object.keys(INSTRUMENTS).filter(k => TONAL_KEYS.has(k));
   const percKeys = percKeysAll.filter(k => !lockedInstruments.has(k)).length > 0
     ? percKeysAll.filter(k => !lockedInstruments.has(k))
