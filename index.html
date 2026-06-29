@@ -368,7 +368,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 05:57</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 06:05</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -451,6 +451,7 @@ const INSTRUMENTS = {
   congLo: { name: 'CONGA LO',    soft: 'Sounds/CongLo50.wav', accent: 'Sounds/CongLo100.wav', group: 'perc' },
   bongHi: { name: 'BONGO HI',    soft: 'Sounds/BongHi50.wav', accent: 'Sounds/BongHi100.wav', group: 'perc' },
   bongLo: { name: 'BONGO LO',    soft: 'Sounds/BongLo50.wav', accent: 'Sounds/BongLo100.wav', group: 'perc' },
+  mic:    { name: 'MIC',         soft: null, accent: null, group: 'kit'  },
   ngate:  { name: 'NOISE',       soft: null, accent: null, group: 'perc'  },
   ride:   { name: 'RIDE',        soft: null, accent: null, group: 'kit'  },
   guiro:  { name: 'GUIRO',       soft: 'Sounds/Guiro.wav', accent: 'Sounds/Guiro_Scratch.wav', group: 'perc'  },
@@ -520,6 +521,11 @@ async function loadSamples() {
     }
   }));
   document.getElementById('loadingOverlay').classList.add('hidden');
+  // Request mic permission early
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+    window._micStream = stream;
+    // Keep stream alive but don't use it yet
+  }).catch(err => console.log('Mic permission denied:', err));
   document.getElementById('status').textContent = '';
 }
 
@@ -586,6 +592,7 @@ function playBuffer(key, isAccent, time, tr) {
   if (key === 'ssnare') { playSynthSnare(isAccent, time, tr); return; }
   if (key === 'shihat') { playSynthHihat(isAccent, time, tr); return; }
   if (key === 'sbass')   { return; } // handled in scheduler with legato duration
+  if (key === 'mic')     { return; } // handled via mic playback
   if (key === 'ngate')   { return; } // handled in scheduler
   if (key === 'sbass3')  { return; }
   if (key === 'sbass4')  { return; }
@@ -776,6 +783,8 @@ function scheduler() {
 
         } else if (key === 'ride') {
           playRide(val === 2, t, tr);
+        } else if (key === 'mic') {
+          playMicSlice(tr, val, t);
         } else if (key === 'ngate') {
           // Noise gate triggered by its own grid notes
           triggerNoiseGate(tr, val === 2, t);
@@ -1735,6 +1744,79 @@ function playSynthAttack(freq, durSec, isAccent, time, tr) {
   lp.frequency.exponentialRampToValueAtTime(freq * 2, time + 0.3);
 }
 
+
+// ── MIC instrument: record → slice → play ──
+const _micBuffers = {}; // tr → array of AudioBuffers (slices)
+const _micRecording = {}; // tr → boolean
+
+async function startMicRecord(tr) {
+  if (_micRecording[tr]) return;
+  try {
+    const stream = window._micStream || await navigator.mediaDevices.getUserMedia({ audio: true });
+    window._micStream = stream;
+    const chunks = [];
+    const rec = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+    rec.ondataavailable = e => chunks.push(e.data);
+    rec.onstop = async () => {
+      const blob = new Blob(chunks, { type: 'audio/webm' });
+      const arrayBuf = await blob.arrayBuffer();
+      const audioBuf = await ctx.decodeAudioData(arrayBuf);
+      // Slice into up to 8 equal regions, trim silence
+      const slices = sliceBuffer(audioBuf, 8);
+      _micBuffers[tr] = slices;
+      _micRecording[tr] = false;
+      // Update R button back to normal
+      const rb = document.getElementById(`randbtn-${tr}`);
+      if (rb) { rb.textContent = 'R'; rb.style.background = ''; rb.style.color = ''; }
+    };
+    _micRecording[tr] = true;
+    // Flash R button red while recording
+    const rb = document.getElementById(`randbtn-${tr}`);
+    if (rb) { rb.textContent = '●'; rb.style.background = '#c0392b'; rb.style.color = '#fff'; }
+    rec.start();
+    setTimeout(() => { if (rec.state === 'recording') rec.stop(); }, 3000); // 3s max
+  } catch(e) { console.error('Mic record failed:', e); }
+}
+
+function sliceBuffer(buf, n) {
+  const data = buf.getChannelData(0);
+  const totalSamples = data.length;
+  
+  // Find non-silent regions
+  const threshold = 0.01;
+  let start = 0, end = totalSamples - 1;
+  while (start < totalSamples && Math.abs(data[start]) < threshold) start++;
+  while (end > start && Math.abs(data[end]) < threshold) end--;
+  const active = end - start;
+  if (active < ctx.sampleRate * 0.05) return []; // too short
+  
+  const sliceLen = Math.floor(active / n);
+  const slices = [];
+  for (let i = 0; i < n; i++) {
+    const s = start + i * sliceLen;
+    const e = Math.min(s + sliceLen, end);
+    const len = e - s;
+    if (len < 100) continue;
+    const sb = ctx.createBuffer(1, len, ctx.sampleRate);
+    sb.getChannelData(0).set(data.slice(s, e));
+    slices.push(sb);
+  }
+  return slices;
+}
+
+function playMicSlice(tr, stepVal, time) {
+  const slices = _micBuffers[tr];
+  if (!slices || slices.length === 0) return;
+  // Pick slice based on step position within measure
+  const idx = Math.floor(Math.random() * slices.length);
+  const buf = slices[idx];
+  const src = ctx.createBufferSource(); src.buffer = buf;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(stepVal === 2 ? 0.9 : 0.6, time);
+  g.gain.exponentialRampToValueAtTime(0.001, time + buf.duration);
+  src.connect(g); g.connect(trackGainNodes[tr] || masterGain);
+  src.start(time);
+}
 function playKick(t) {
   const beatDest = window._beatGain || masterGain;
   const osc = ctx.createOscillator(), g = ctx.createGain();
@@ -3599,6 +3681,16 @@ function wireRandomizeButton(btn, tr) {
 
 buildUI();
 updateMasterVolCells();
+// MIC track R button override
+document.addEventListener('click', e => {
+  const rb = e.target.closest('[id^="randbtn-"]');
+  if (!rb) return;
+  const tr = parseInt(rb.id.split('-')[1]);
+  if (trackInstruments[tr] === 'mic') {
+    e.stopImmediatePropagation();
+    startMicRecord(tr);
+  }
+}, true);
 // Initialise bar display
 (function() {
   const nd = document.getElementById('nameDisplay');
@@ -3735,7 +3827,7 @@ if ('serviceWorker' in navigator) {
     setTimeout(() => { try { noise.stop(); } catch(e) {} }, quarterNote * 1000 + 100);
   }
 
-  btn.addEventListener('touchstart', e => { e.preventDefault(); playUiSound('click'); startSweep(); }, { passive: false });
+  btn.addEventListener('touchstart', e => { e.preventDefault(); startSweep(); }, { passive: false });
   btn.addEventListener('touchend', e => {
     e.preventDefault();
     const minMs = stepDuration() * 1000; // one 16th note
