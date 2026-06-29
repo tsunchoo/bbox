@@ -370,7 +370,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 23:18</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 23:22</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -921,6 +921,12 @@ function togglePlay() {
     _beatPending = false;
     document.querySelectorAll('.step-cell').forEach(el => el.classList.remove('playing'));
     stopRecallLoop();
+    // Pause auto-rand intervals (keep visual state, restart on next play)
+    Object.keys(autoShiftStops).forEach(tr => {
+      const btn = document.getElementById(`randbtn-${+tr}`);
+      if (btn) btn._autoRandPaused = true;
+      clearInterval(btn?._autoRandInterval);
+    });
     if (window._duckGain) { window._duckGain.gain.cancelScheduledValues(ctx.currentTime); window._duckGain.gain.setValueAtTime(1, ctx.currentTime); }
     // Auto-stop recording after half-bar delay (to capture reverb tail)
     if (_recArmed && _mediaRecorder && _mediaRecorder.state === 'recording') {
@@ -3454,9 +3460,15 @@ function restoreState(snap) {
       if (isAuto) {
         if (lane) lane.style.setProperty('--track-color', '#f71aff');
         if (rb) { rb.classList.add('rand-auto'); rb.textContent = 'A'; }
+        // Restart auto interval if it's not already running
+        if (!autoShiftStops[tr]) {
+          const btn2 = rb;
+          if (btn2 && btn2._restartAuto) btn2._restartAuto();
+        }
       } else {
         if (lane) { lane.style.removeProperty('--track-color'); }
         if (rb) { rb.classList.remove('rand-auto'); rb.textContent = 'R'; }
+        if (autoShiftStops[tr]) autoShiftStops[tr]();
         setTrackNameColor(tr, trackInstruments[tr]);
       }
     });
@@ -3755,9 +3767,12 @@ function wireRandomizeButton(btn, tr) {
     const _lane = document.getElementById(`lane-${tr}`);
     if (_lane) _lane.style.setProperty('--track-color', '#f71aff');
     doRand();
-    autoInterval = setInterval(() => { doRand(); }, (60 / bpm) * 4 * 1000);
+    autoInterval = setInterval(() => { if (playing) doRand(); }, (60 / bpm) * 4 * 1000);
     autoShiftStops[tr] = stopAuto;
   };
+
+  // Expose restart for slot restore
+  btn._restartAuto = doDoubleTap;
 
   let lastTap = 0;
   const onTap = () => {
