@@ -370,7 +370,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 22:46</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 22:55</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -1512,7 +1512,7 @@ function playStab(freq, durSec, isAccent, time, tr) {
 function playRhodes2(freq, durSec, isAccent, time, tr) {
   if (!ctx || !freq) return;
   const dest = getSynthConnectNode(tr);
-  const vel = isAccent ? 0.202 : 0.139;
+  const vel = isAccent ? 0.127 : 0.088;
 
   const B = 0.00008; // less inharmonicity = warmer
   const inharmonic = n => freq * n * Math.sqrt(1 + B * n * n);
@@ -1702,7 +1702,7 @@ function playForestFlute(freq, durSec, isAccent, time, tr) {
 function playBlunt(freq, durSec, isAccent, time, tr) {
   if (!ctx || !freq) return;
   const dest = getSynthConnectNode(tr);
-  const vel = isAccent ? 0.036 : 0.024;
+  const vel = isAccent ? 0.143 : 0.096;
   const tail = 2.0;
   [-14, 14].forEach(det => {
     const osc = ctx.createOscillator(); osc.type = 'sawtooth';
