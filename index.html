@@ -203,19 +203,15 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 .sound-option.active { background: var(--text); color: var(--bg); border: none; }
 /* Instrument group colours */
 .inst-kit   { background: #1a3a6b; color: #fff; }
-.inst-mic   { background: #ffe033; color: #111; }
 .inst-perc  { background: #2a7a3a; color: #fff; }
 .inst-tonal { background: #fd475d; color: #fff; }
 .inst-kit:hover   { background: #0d1f40; color: #fff; }
-.inst-mic:hover   { background: #e6ca00; color: #111; }
 .inst-perc:hover  { background: #1a5228; color: #fff; }
 .inst-tonal:hover { background: #fd475d; color: #fff; }
 .inst-kit.active, .inst-perc.active, .inst-tonal.active { background: var(--text); color: var(--bg); border: none; }
 /* Track name buttons inherit group color */
 .track-name-btn.inst-kit   { background: #1a3a6b; color: #fff; }
-.track-name-btn.inst-mic   { background: #ffe033; color: #111; }
-.inst-mic   { background: #ffe033; color: #111; }
-.track-name-btn.inst-perc  { background: #2a7a3a; color: #fff; }
+.track-name-btn.track-name-btn.inst-perc  { background: #2a7a3a; color: #fff; }
 .track-name-btn.inst-tonal { background: #fd475d; color: #fff; }
 .track-name-btn.has-notes.inst-kit   { background: #1a3a6b; }
 .track-name-btn.has-notes.inst-perc  { background: #2a7a3a; }
@@ -372,7 +368,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 07:07</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 07:10</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -470,7 +466,6 @@ const INSTRUMENTS = {
   sflute: { name: 'SYN FLUTE',   soft: null, accent: null, group: 'tonal' },
   satk:   { name: 'SYN ATTACK',  soft: null, accent: null, group: 'tonal' },
   boog:   { name: 'BOOG',        soft: null, accent: null, group: 'tonal' },
-  mic:    { name: 'MIC',         soft: null, accent: null, group: 'mic'  },
 };
 const INSTRUMENT_KEYS = Object.keys(INSTRUMENTS);
 let ctx = null, masterGain = null;
@@ -591,7 +586,6 @@ function playBuffer(key, isAccent, time, tr) {
   if (key === 'ssnare') { playSynthSnare(isAccent, time, tr); return; }
   if (key === 'shihat') { playSynthHihat(isAccent, time, tr); return; }
   if (key === 'sbass')   { return; } // handled in scheduler with legato duration
-  if (key === 'mic')     { return; } // handled via mic playback
   if (key === 'ngate')   { return; } // handled in scheduler
   if (key === 'sbass3')  { return; }
   if (key === 'sbass4')  { return; }
@@ -782,8 +776,6 @@ function scheduler() {
 
         } else if (key === 'ride') {
           playRide(val === 2, t, tr);
-        } else if (key === 'mic') {
-          playMicSlice(tr, val, t);
         } else if (key === 'ngate') {
           // Noise gate triggered by its own grid notes
           triggerNoiseGate(tr, val === 2, t);
@@ -1744,110 +1736,7 @@ function playSynthAttack(freq, durSec, isAccent, time, tr) {
 }
 
 
-// ── MIC instrument: record → slice → play ──
-const _micBuffers = {}; // tr → array of AudioBuffers (slices)
-const _micRecording = {}; // tr → boolean
 
-let _micMediaRecorder = null;
-
-async function _micStartRecord(tr) {
-  if (_micRecording[tr] === true) return; // already recording
-  try {
-    // Await permission before doing anything else
-    const stream = window._micStream || await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true } });
-    window._micStream = stream;
-
-    // Permission granted — check user is still holding
-    if (_micRecording[tr] === false) return; // released before permission granted
-    // Duck and show recording state
-    if (masterGain && ctx) { masterGain.gain.cancelScheduledValues(ctx.currentTime); masterGain.gain.setTargetAtTime(masterVol * 0.178, ctx.currentTime, 0.05); }
-    const ctrlR = document.getElementById(`ctrlrow-${tr}`);
-    const nb = document.getElementById(`tbtn-${tr}`);
-    if (ctrlR) ctrlR.style.background = '#c0392b';
-    if (nb) { nb.style.background = '#c0392b'; nb.style.color = '#fff'; }
-
-    const chunks = [];
-    const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
-    const rec = new MediaRecorder(stream, { mimeType });
-    _micMediaRecorder = rec;
-    rec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-    rec.onstop = async () => {
-      try {
-        const blob = new Blob(chunks, { type: mimeType });
-        const arrayBuf = await blob.arrayBuffer();
-        const audioBuf = await ctx.decodeAudioData(arrayBuf);
-        const slices = sliceBuffer(audioBuf, 8);
-        _micBuffers[tr] = slices;
-        trackSweep[tr] = true;
-        const sb = document.getElementById(`swpbtn-${tr}`);
-        if (sb) { sb.textContent = 'L'; sb.classList.add('sweep-on'); }
-      } catch(e) { console.error('Mic decode failed:', e); }
-      _micRecording[tr] = false;
-      _micMediaRecorder = null;
-    };
-    _micRecording[tr] = true;
-    rec.start(100);
-  } catch(e) { console.error('Mic record failed:', e); _micRecording[tr] = false; }
-}
-
-function _micStopRecord(tr) {
-  if (_micMediaRecorder && _micMediaRecorder.state === 'recording') {
-    _micMediaRecorder.stop();
-  }
-  _micRecording[tr] = false;
-  // Release mic stream so iOS returns audio session to playback mode (restores Bluetooth)
-  if (window._micStream) {
-    window._micStream.getTracks().forEach(t => t.stop());
-    window._micStream = null;
-  }
-}
-
-function sliceBuffer(buf, n) {
-  const data = buf.getChannelData(0);
-  const totalSamples = data.length;
-  
-  // Find non-silent regions
-  const threshold = 0.01;
-  let start = 0, end = totalSamples - 1;
-  while (start < totalSamples && Math.abs(data[start]) < threshold) start++;
-  while (end > start && Math.abs(data[end]) < threshold) end--;
-  const active = end - start;
-  if (active < ctx.sampleRate * 0.05) return []; // too short
-  
-  const sliceLen = Math.floor(active / n);
-  const slices = [];
-  for (let i = 0; i < n; i++) {
-    const s = start + i * sliceLen;
-    const e = Math.min(s + sliceLen, end);
-    const len = e - s;
-    if (len < 100) continue;
-    const sb = ctx.createBuffer(1, len, ctx.sampleRate);
-    const sliceData = data.slice(s, e);
-    // Normalize to peak then boost
-    let peak = 0;
-    for (let j = 0; j < sliceData.length; j++) peak = Math.max(peak, Math.abs(sliceData[j]));
-    const boost = peak > 0.001 ? Math.min(1.0 / peak, 10) : 1; // normalize, cap at +20dB
-    const normalized = new Float32Array(sliceData.length);
-    for (let j = 0; j < sliceData.length; j++) normalized[j] = sliceData[j] * boost;
-    sb.getChannelData(0).set(normalized);
-    slices.push(sb);
-  }
-  return slices;
-}
-
-function playMicSlice(tr, stepVal, time) {
-  const slices = _micBuffers[tr];
-  if (!slices || slices.length === 0) return;
-  // Pick slice based on current step
-  const idx = currentStep % slices.length;
-  const buf = slices[idx];
-  const src = ctx.createBufferSource(); src.buffer = buf;
-  const g = ctx.createGain();
-  g.gain.setValueAtTime(stepVal === 2 ? 2.85 : 1.9, time); // +10dB boost
-  g.gain.exponentialRampToValueAtTime(0.001, time + buf.duration);
-  src.connect(g); g.connect(trackGainNodes[tr] || masterGain);
-  src.start(time);
-}
 function playKick(t) {
   const beatDest = window._beatGain || masterGain;
   const osc = ctx.createOscillator(), g = ctx.createGain();
@@ -1962,7 +1851,7 @@ function setTrackNameColor(tr, key) {
   const btn = document.getElementById(`tbtn-${tr}`); if (!btn) return;
   btn.classList.remove('inst-kit','inst-perc','inst-tonal','inst-mic');
   const g = INSTRUMENTS[key]?.group || 'perc';
-  const _laneColors = {'kit':'#1a3a6b','perc':'#2a7a3a','tonal':'#fd475d','mic':'#ffe033'};
+  const _laneColors = {'kit':'#1a3a6b','perc':'#2a7a3a','tonal':'#fd475d'};
   const lane = document.getElementById(`lane-${tr}`);
   if (lane) lane.style.setProperty('--track-color', _laneColors[g] || 'var(--text)');
   btn.classList.add('inst-' + g);
@@ -2070,26 +1959,10 @@ function buildUI() {
     nameBtn.classList.toggle('muted', trackMuted[tr]);
     let ht = null;
     const onNameDown = () => {
-      if (trackInstruments[tr] === 'mic') {
-        // MIC track: set pending so we can cancel if released before permission granted
-        _micRecording[tr] = 'pending';
-        _micStartRecord(tr);
-      } else {
-        ht = setTimeout(() => { ht = null; openSoundPicker(tr); }, 400);
-      }
+      ht = setTimeout(() => { ht = null; openSoundPicker(tr); }, 400);
     };
     const onNameUp = () => {
-      if (trackInstruments[tr] === 'mic') {
-        _micRecording[tr] = false; // cancel pending if permission not yet granted
-        // Stop recording
-        ctrlRow.style.background = '';
-        nameBtn.style.background = '';
-        nameBtn.style.color = '';
-        if (masterGain && ctx) { masterGain.gain.cancelScheduledValues(ctx.currentTime); masterGain.gain.setTargetAtTime(masterVol, ctx.currentTime, 0.05); }
-        _micStopRecord(tr);
-      } else {
-        if (ht) { clearTimeout(ht); ht = null; trackMuted[tr] = !trackMuted[tr]; updateTrackMute(tr); markModified(); }
-      }
+      if (ht) { clearTimeout(ht); ht = null; trackMuted[tr] = !trackMuted[tr]; updateTrackMute(tr); markModified(); }
     };
     nameBtn.addEventListener('mousedown', onNameDown);
     nameBtn.addEventListener('mouseup', onNameUp);
@@ -3132,7 +3005,7 @@ function randAll(mode) {
     if (trackSweep[tr]) lockedInstruments.add(trackInstruments[tr]);
   }
   // Prefer non-locked instruments but allow locked ones if category is depleted
-  const percKeysAll = Object.keys(INSTRUMENTS).filter(k => !TONAL_KEYS.has(k) && k !== 'mic' && !(k === 'guiro' && Math.random() < 0.5));
+  const percKeysAll = Object.keys(INSTRUMENTS).filter(k => !TONAL_KEYS.has(k) && !(k === 'guiro' && Math.random() < 0.5));
   const tonalKeysAll = Object.keys(INSTRUMENTS).filter(k => TONAL_KEYS.has(k));
   const percKeys = percKeysAll.filter(k => !lockedInstruments.has(k)).length > 0
     ? percKeysAll.filter(k => !lockedInstruments.has(k))
