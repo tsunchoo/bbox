@@ -370,7 +370,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 22:37</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 22:46</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -469,7 +469,7 @@ const INSTRUMENTS = {
   sflute: { name: 'SYN FLUTE',   soft: null, accent: null, group: 'tonal' },
   satk:   { name: 'SYN ATTACK',  soft: null, accent: null, group: 'tonal' },
   boog:   { name: 'BOOG',        soft: null, accent: null, group: 'tonal' },
-  fflute: { name: 'FOREST FLUTE', soft: null, accent: null, group: 'tonal' },
+  fflute: { name: 'SAXY', soft: null, accent: null, group: 'tonal' },
   blunt:  { name: 'BLUNT',        soft: null, accent: null, group: 'tonal' },
 };
 const INSTRUMENT_KEYS = Object.keys(INSTRUMENTS);
@@ -1077,7 +1077,8 @@ function transposeRootToRange(root, roots) {
 }
 function getRangeRoots(key) {
   if (key === 'sparkle') return SPARKLE_ROOTS;
-  if (key === 'sflute' || key === 'boog' || key === 'fflute') return HIGH_ROOTS;
+  if (key === 'sflute' || key === 'boog') return HIGH_ROOTS;
+  if (key === 'fflute') return MELODY_ROOTS; // SAX — one octave lower
   if (key === 'blunt') return MID_ROOTS;
   if (key === 'stab') return MID_ROOTS;
   if (key === 'sstring' || key === 'sleg' || key === 'rhodes' || key === 'rhodes2') return MELODY_ROOTS;
@@ -1633,7 +1634,7 @@ const _ffluteGlide = {};
 function playForestFlute(freq, durSec, isAccent, time, tr) {
   if (!ctx || !freq) return;
   const dest = getSynthConnectNode(tr);
-  const vel = isAccent ? 0.28 : 0.18;
+  const vel = isAccent ? 0.111 : 0.072;
 
   const prevFreq = _ffluteGlide[tr] || freq;
   _ffluteGlide[tr] = freq;
@@ -3786,7 +3787,7 @@ async function initAudio() {
     msg.textContent = 'RESUMED, BUILDING GRAPH...';
     attachCtxStateWatch();
     masterGain = ctx.createGain(); masterGain.gain.value = masterVol;
-    window._beatGain = ctx.createGain(); window._beatGain.gain.value = 0.75; window._beatGain.connect(masterGain);
+    window._beatGain = ctx.createGain(); window._beatGain.gain.value = 0.531; window._beatGain.connect(masterGain);
     // UI Sounds
     const _uiSoundBufs = {};
     window._uiSoundBufs = _uiSoundBufs;
