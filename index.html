@@ -372,7 +372,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 06:53</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 06:57</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -1753,9 +1753,17 @@ let _micMediaRecorder = null;
 async function _micStartRecord(tr) {
   if (_micRecording[tr]) return;
   try {
+    // Await permission before doing anything else
     const stream = window._micStream || await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true } });
     window._micStream = stream;
-    window._micStream = stream;
+
+    // Permission granted — now duck and show recording state
+    if (masterGain && ctx) { masterGain.gain.cancelScheduledValues(ctx.currentTime); masterGain.gain.setTargetAtTime(masterVol * 0.178, ctx.currentTime, 0.05); }
+    const ctrlR = document.getElementById(`ctrlrow-${tr}`);
+    const nb = document.getElementById(`tbtn-${tr}`);
+    if (ctrlR) ctrlR.style.background = '#c0392b';
+    if (nb) { nb.style.background = '#c0392b'; nb.style.color = '#fff'; }
+
     const chunks = [];
     const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
     const rec = new MediaRecorder(stream, { mimeType });
@@ -1768,7 +1776,6 @@ async function _micStartRecord(tr) {
         const audioBuf = await ctx.decodeAudioData(arrayBuf);
         const slices = sliceBuffer(audioBuf, 8);
         _micBuffers[tr] = slices;
-        // Lock track so recording can't be easily erased
         trackSweep[tr] = true;
         const sb = document.getElementById(`swpbtn-${tr}`);
         if (sb) { sb.textContent = 'L'; sb.classList.add('sweep-on'); }
@@ -1777,7 +1784,7 @@ async function _micStartRecord(tr) {
       _micMediaRecorder = null;
     };
     _micRecording[tr] = true;
-    rec.start(100); // collect in 100ms chunks
+    rec.start(100);
   } catch(e) { console.error('Mic record failed:', e); _micRecording[tr] = false; }
 }
 
@@ -2057,11 +2064,7 @@ function buildUI() {
     let ht = null;
     const onNameDown = () => {
       if (trackInstruments[tr] === 'mic') {
-        // MIC track: hold to record — colour entire ctrl row
-        ctrlRow.style.background = '#c0392b';
-        nameBtn.style.background = '#c0392b';
-        nameBtn.style.color = '#fff';
-        if (masterGain && ctx) masterGain.gain.setTargetAtTime(masterVol * 0.178, ctx.currentTime, 0.05); // -15dB while recording
+        // MIC track: hold to record — _micStartRecord handles duck/color after permission
         _micStartRecord(tr);
       } else {
         ht = setTimeout(() => { ht = null; openSoundPicker(tr); }, 400);
