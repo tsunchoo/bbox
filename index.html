@@ -368,7 +368,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 07:50</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">29Jun26 07:54</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -3820,7 +3820,7 @@ if ('serviceWorker' in navigator) {
     setTimeout(() => { try { noise.stop(); } catch(e) {} }, quarterNote * 1000 + 100);
   }
 
-  btn.addEventListener('touchstart', e => { e.preventDefault(); playUiSound('click'); startSweep(); }, { passive: false });
+  btn.addEventListener('touchstart', e => { e.preventDefault(); startSweep(); }, { passive: false });
   btn.addEventListener('touchend', e => {
     e.preventDefault();
     const minMs = stepDuration() * 1000; // one 16th note
