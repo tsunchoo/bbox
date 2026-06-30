@@ -370,7 +370,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">30Jun26 05:11</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">30Jun26 05:49</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -623,7 +623,7 @@ function playBuffer(key, isAccent, time, tr) {
 
   const src = ctx.createBufferSource(); src.buffer = buf;
   const instrumentGain = ctx.createGain();
-  instrumentGain.gain.value = (key === 'shak') ? 0.25 : (key === 'clap') ? 0.177 : (key === 'tamb') ? 0.397 : (key === 'guiro') ? 0.178 : (key === 'ride') ? 0.225 : (key === 'congHi' || key === 'congLo' || key === 'bongHi' || key === 'bongLo') ? 0.316 : 0.5;
+  instrumentGain.gain.value = (key === 'shak') ? 0.25 : (key === 'clap') ? 0.177 : (key === 'tamb') ? 0.397 : (key === 'guiro') ? 0.178 : (key === 'ride') ? 0.225 : (key === 'congHi' || key === 'congLo' || key === 'bongHi' || key === 'bongLo') ? 0.355 : 0.5;
 
   const fxVal = trackFx[tr];
   const on = fxVal && (fxVal.x > 0 || fxVal.y > 0);
