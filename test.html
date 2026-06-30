@@ -157,8 +157,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 .shift-btn:active { opacity: 0.4; }
 .track-vol-bar {
   flex: 1; position: relative; overflow: hidden;
-  background: transparent; border: none;
-  border-bottom: 1.5px solid #aaa;
+  background: #222; border: none;
   cursor: ew-resize; touch-action: none;
   -webkit-tap-highlight-color: transparent;
 }
@@ -388,7 +387,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">30Jun26 21:49</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">30Jun26 21:56</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -415,33 +414,36 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <!-- Settings window — appears on reel hold -->
 <div id="settingsOverlay" style="display:none;position:fixed;inset:0;z-index:250;background:rgba(0,0,0,0.5);" id="settingsBg">
-  <div id="settingsPanel" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg);padding:28px 24px;min-width:min(340px,90vw);display:flex;flex-direction:column;gap:18px;font-family:'DM Sans',sans-serif;">
-    <div style="font-size:0.65rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:4px;">SETTINGS</div>
+  <div id="settingsPanel" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg);padding:24px;min-width:min(340px,90vw);display:flex;flex-direction:column;gap:16px;font-family:'DM Sans',sans-serif;">
 
-    <div style="display:flex;flex-direction:column;gap:6px;">
-      <div style="font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);">MAIN VOL</div>
-      <input type="range" id="masterVolBar" min="0" max="100" value="80" class="master-vol-slider" style="width:100%;">
+    <!-- Info row: song name, key (tappable), bpm -->
+    <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:1px solid #ddd;">
+      <div style="font-size:1rem;font-weight:700;color:#111;letter-spacing:0.5px;text-transform:uppercase;" id="settingsNameDisplay"></div>
+      <div id="keyDisplay" style="font-size:1rem;font-weight:700;color:#111;cursor:pointer;user-select:none;-webkit-user-select:none;letter-spacing:1px;text-transform:uppercase;" title="tap to change key"></div>
+      <div id="bpmVal" style="font-size:1rem;font-weight:700;color:#111;">110 BPM</div>
     </div>
 
-    <div style="display:flex;flex-direction:column;gap:6px;">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;">
-        <div style="font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);">SWING</div>
-        <div id="swingReadout" style="font-size:1.1rem;font-weight:700;color:#111;font-family:'DM Sans',sans-serif;line-height:1;">25ms</div>
+    <!-- Three sliders grouped together -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        <div style="font-size:0.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);">VOLUME</div>
+        <input type="range" id="masterVolBar" min="0" max="100" value="80" class="master-vol-slider" style="width:100%;">
       </div>
-      <input type="range" id="swingBar" min="0" max="100" value="62" class="master-vol-slider" style="width:100%;">
-    </div>
 
-    <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #ddd;padding-top:14px;">
-      <div style="font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);">KEY</div>
-      <div id="keyDisplay" style="font-size:1.1rem;font-weight:700;color:#111;cursor:pointer;user-select:none;-webkit-user-select:none;letter-spacing:1px;" title="tap to change key"></div>
-    </div>
-
-    <div style="display:flex;flex-direction:column;gap:6px;">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;">
-        <div style="font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);">TEMPO</div>
-        <div id="bpmVal" style="font-size:1.1rem;font-weight:700;color:#111;">110 BPM</div>
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        <div style="display:flex;justify-content:space-between;">
+          <div style="font-size:0.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);">SWING</div>
+          <div id="swingReadout" style="font-size:0.6rem;font-weight:700;color:#111;font-family:'DM Sans',sans-serif;">25ms</div>
+        </div>
+        <input type="range" id="swingBar" min="0" max="100" value="62" class="master-vol-slider" style="width:100%;">
       </div>
-      <input type="range" id="bpmSettingsSlider" min="40" max="200" value="110" class="master-vol-slider" style="width:100%;" oninput="bpm=+this.value; document.getElementById('bpmVal').textContent=this.value+' BPM'; document.getElementById('bpmSlider').value=this.value; document.getElementById('bpmOverlayVal').textContent=this.value+' BPM';">
+
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        <div style="font-size:0.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);">TEMPO</div>
+        <input type="range" id="bpmSettingsSlider" min="40" max="200" value="110" class="master-vol-slider" style="width:100%;" oninput="bpm=+this.value; document.getElementById('bpmSlider').value=this.value; document.getElementById('bpmOverlayVal').textContent=this.value+' BPM'; syncSettingsPanel();">
+      </div>
+
     </div>
   </div>
 </div>
@@ -540,6 +542,16 @@ function setSwingVal(v) {
   swingVal = Math.max(0, Math.min(1, v));
   const slider = document.getElementById('swingBar');
   if (slider) slider.value = Math.round(swingVal * 100);
+  updateSwingReadout();
+}
+
+function syncSettingsPanel() {
+  const bv = document.getElementById('bpmVal');
+  if (bv) bv.textContent = bpm + ' BPM';
+  const bs = document.getElementById('bpmSettingsSlider');
+  if (bs) bs.value = bpm;
+  const kd = document.getElementById('keyDisplay');
+  if (kd) kd.textContent = (getKeyName() || '').replace(/-/g, ' ');
   updateSwingReadout();
 }
 function updateSwingReadout() {
@@ -787,8 +799,8 @@ function scheduler() {
           const row = document.getElementById(`ctrlrow-${tr}`); if (row) row.classList.toggle('row-muted', trackMuted[tr]);
           const vb = document.getElementById(`vbar-${tr}`); if (vb) { vb.classList.toggle('muted', trackMuted[tr]); const f = vb.querySelector('.track-vol-fill'); if (f) f.style.width = Math.round(trackVolume[tr]*100)+'%'; }
         }
-        document.getElementById('bpmVal').textContent = bpm;
         document.getElementById('bpmSlider').value = bpm;
+        syncSettingsPanel();
         const bb = document.getElementById('beatBtn');
         if (bb) bb.classList.toggle('active', beatPlaying);
         updateBeatPulse();
@@ -3371,6 +3383,7 @@ function toggleBpmOverlay() {
   if (isVis) {
     document.getElementById('bpmSlider').value = bpm;
     document.getElementById('bpmOverlayVal').textContent = bpm + ' BPM';
+    syncSettingsPanel();
   }
 }
 document.addEventListener('click', e => {
@@ -3711,7 +3724,7 @@ function restoreState(snap) {
   }
   bpm=snap.bpm;
   document.getElementById('bpmSlider').value=bpm;
-  document.getElementById('bpmVal').textContent=bpm;
+  syncSettingsPanel();
   if (snap.masterVol !== undefined) setMasterVol(snap.masterVol);
   if (snap.speciesName) {
     _currentSpecies = snap.speciesName;
@@ -4086,6 +4099,9 @@ updateMasterVolCells();
 function showSettings() {
   const el = document.getElementById('settingsOverlay');
   if (el) { el.style.display = 'flex'; el.style.alignItems = 'center'; el.style.justifyContent = 'center'; }
+  const snd = document.getElementById('settingsNameDisplay');
+  if (snd) snd.textContent = _currentSpecies || '';
+  syncSettingsPanel();
 }
 function hideSettings() {
   const el = document.getElementById('settingsOverlay');
@@ -4330,18 +4346,10 @@ if ('serviceWorker' in navigator) {
 })();
 
 
-// BPM display: hold to open tempo overlay
+// BPM display: now a read-only label inside settings panel — overlay wiring removed
 (function() {
   const bpmSpan = document.getElementById('bpmVal');
   if (!bpmSpan) return;
-  let holdTimer = null;
-  bpmSpan.addEventListener('touchstart', e => {
-    e.preventDefault();
-    holdTimer = setTimeout(() => { holdTimer = null; toggleBpmOverlay(); }, 400);
-  }, { passive: false });
-  bpmSpan.addEventListener('touchend', e => { e.preventDefault(); if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; } }, { passive: false });
-  bpmSpan.addEventListener('mousedown', () => { holdTimer = setTimeout(() => { holdTimer = null; toggleBpmOverlay(); }, 400); });
-  bpmSpan.addEventListener('mouseup', () => { if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; } });
   bpmSpan.addEventListener('mouseleave', () => { if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; } });
 })();
 
