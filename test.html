@@ -389,7 +389,7 @@ input[type=range]::-moz-range-thumb { width: 28px; height: 28px; background: #f1
 
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">30Jun26 22:34</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">30Jun26 22:42</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -587,7 +587,7 @@ function playUiSound(name) {
   if (!ctx || !window._uiSoundBufs || !window._uiSoundBufs[name]) return;
   const src = ctx.createBufferSource(); src.buffer = window._uiSoundBufs[name];
   src.playbackRate.value = name === 'rewind' ? 1.5 : 1.0; // rewind plays faster
-  const g = ctx.createGain(); g.gain.value = name === 'rewind' ? 0.394 : 0.7; // rewind -3dB
+  const g = ctx.createGain(); g.gain.value = name === 'rewind' ? 0.625 : 0.7;
   src.connect(g); g.connect(masterGain);
   src.start();
 }
@@ -1104,7 +1104,7 @@ function playSynthKick(isAccent, time, tr) {
 function playSynthSnare(isAccent, time, tr) {
   if (!ctx) return;
   const dest = getSynthConnectNode(tr);
-  const dur = isAccent ? 0.22 : 0.15, vol = isAccent ? 0.460 : 0.297;
+  const dur = isAccent ? 0.22 : 0.15, vol = isAccent ? 0.325 : 0.210;
   // Noise: shorter, crisper, higher filtered — jazzy rimshot character
   const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
   const d = buf.getChannelData(0);
@@ -3881,10 +3881,11 @@ function placeNotes(tr, noteCount, accentRatio, level) {
   const key = trackInstruments[tr];
   // Kick: never land on beat 1 (step 0) or beat 3 (step 8) — those belong to the BEAT
   if (key === 'skick') { grid[tr][0] = 0; grid[tr][8] = 0; }
-  // Handclap: always on beats 2 and 4 only (steps 4 and 12)
+  // Handclap: beats 2+4 (steps 4,12) or beats 1+3 (steps 0,8) — 50/50
   if (key === 'clap') {
     for (let s = 0; s < NUM_STEPS; s++) grid[tr][s] = 0;
-    grid[tr][4] = 2; grid[tr][12] = 2;
+    if (Math.random() < 0.5) { grid[tr][4] = 2; grid[tr][12] = 2; }  // beats 2+4
+    else { grid[tr][0] = 2; grid[tr][8] = 2; }  // beats 1+3
   }
   // Guiro: max 2 accents per measure, 40% chance of accent on beat 1
   if (key === 'guiro') {
@@ -3943,9 +3944,8 @@ function randomizeTrack(tr) {
   if (straightKeys.has(key) && Math.random() < 0.3 || isTonalStraight) {
     const isEighths = Math.random() < 0.5;
     const step = isEighths ? 2 : 4;
-    // Downbeats (0,4,8,12) or upbeats (2,6,10,14) — 50/50
-    const isUpbeat = isTonalStraight && Math.random() < 0.5;
-    const offset = isUpbeat ? 1 : 0; // upbeat = start on step 1 of each beat pair
+    // Downbeats (0,4,8,12) or upbeats (2,6,10,14) — 50/50 for all straight instruments
+    const isUpbeat = Math.random() < 0.5;
     for (let s = 0; s < NUM_STEPS; s++) {
       const gs = (s - trackOffset[tr] + NUM_STEPS) % NUM_STEPS;
       const hits = isUpbeat
@@ -4185,7 +4185,7 @@ async function initAudio() {
     // UI Sounds
     const _uiSoundBufs = {};
     window._uiSoundBufs = _uiSoundBufs;
-    ['click','play','rewind','clickoff'].forEach(name => {
+    ['click','play','rewind','rewind2','clickoff'].forEach(name => {
       fetch(`Sounds/${name}.wav`).then(r => r.arrayBuffer()).then(buf => ctx.decodeAudioData(buf, decoded => { _uiSoundBufs[name] = decoded; })).catch(()=>{});
     });
     window.masterLimiter = ctx.createDynamicsCompressor(); const masterLimiter = window.masterLimiter;
@@ -4345,7 +4345,7 @@ if ('serviceWorker' in navigator) {
       target.dataset.sweepTriggered = '1';
       if (target.id === 'beatBtn') toggleBeat();
       if (target.id === 'randBtn') { setBtnBlueHeld('randBtn'); queueRand(); }
-      if (target.id === 'scratchBtn') { if (_recallSnapB) { const _cur = snapshotState(); restoreState(_recallSnapB); flashBtnOrange('scratchBtn'); window._reelReversePending = true; _recallSnapB = _cur; playUiSound('rewind'); } }
+      if (target.id === 'scratchBtn') { if (_recallSnapB) { const _cur = snapshotState(); restoreState(_recallSnapB); flashBtnOrange('scratchBtn'); window._reelReversePending = true; _recallSnapB = _cur; playUiSound(Math.random() < 0.5 ? 'rewind' : 'rewind2'); } }
     }
   }, { passive: false });
   btn.addEventListener('touchend', () => {
@@ -4393,7 +4393,7 @@ function stopRecallLoop() {
 
   const doRecall = () => {
     if (!_recallSnapB) return;
-    playUiSound('rewind');
+    playUiSound(Math.random() < 0.5 ? 'rewind' : 'rewind2');
     const current = snapshotState();
     document.querySelectorAll('.reel-wrap').forEach(r => {
       r.classList.remove('spinning');
