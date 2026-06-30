@@ -374,7 +374,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">30Jun26 16:29</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">30Jun26 17:06</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -1221,7 +1221,6 @@ function randomizeBassTrack(tr, level) {
   // RAND-time only: chance to promote a soft hit to a 32nd-split for select instruments.
   // This is the ONLY place split-32 notes are ever assigned — never during live playback.
   const split32Keys = new Set(['shihat','sparkle','congHi','bongHi','rhodes','rhodes2']);
-  console.log('[split32 check] tr=' + tr + ' key=' + key + ' isMatch=' + split32Keys.has(key) + ' grid=' + JSON.stringify(grid[tr]));
   if (split32Keys.has(key)) {
     let splitCount = 0;
     const maxSplits = (key === 'rhodes' || key === 'rhodes2') ? 3 : 99;
@@ -1229,7 +1228,6 @@ function randomizeBassTrack(tr, level) {
       if (grid[tr][s] === 1 && splitCount < maxSplits && Math.random() < 0.18) {
         grid[tr][s] = 3;
         splitCount++;
-        console.log('[split32] APPLIED at step ' + s + ' for ' + key);
       }
     }
   }
@@ -2381,7 +2379,7 @@ function redrawTrackCells(tr) {
   for (let s = 0; s < NUM_STEPS; s++) {
     const el = document.querySelector(`[data-track="${tr}"][data-step="${s}"]`); if (!el) continue;
     const gs = (s - trackOffset[tr] + NUM_STEPS) % NUM_STEPS, val = grid[tr][gs];
-    el.classList.toggle('on', val === 2); el.classList.toggle('soft', val === 1);
+    el.classList.toggle('on', val === 2); el.classList.toggle('soft', val === 1); el.classList.toggle('split32', val === 3);
   }
   const tbtn = document.getElementById(`tbtn-${tr}`);
   if (tbtn) tbtn.classList.toggle('has-notes', grid[tr].some(v => v > 0));
@@ -3869,7 +3867,6 @@ function randomizeTrack(tr) {
   // RAND-time only: chance to promote a soft hit to a 32nd-split for select instruments.
   // This is the ONLY place split-32 notes are ever assigned — never during live playback.
   const split32Keys = new Set(['shihat','sparkle','congHi','bongHi','rhodes','rhodes2']);
-  console.log('[split32 check] tr=' + tr + ' key=' + key + ' isMatch=' + split32Keys.has(key) + ' grid=' + JSON.stringify(grid[tr]));
   if (split32Keys.has(key)) {
     let splitCount = 0;
     const maxSplits = (key === 'rhodes' || key === 'rhodes2') ? 3 : 99;
@@ -3877,7 +3874,6 @@ function randomizeTrack(tr) {
       if (grid[tr][s] === 1 && splitCount < maxSplits && Math.random() < 0.18) {
         grid[tr][s] = 3;
         splitCount++;
-        console.log('[split32] APPLIED at step ' + s + ' for ' + key);
       }
     }
   }
