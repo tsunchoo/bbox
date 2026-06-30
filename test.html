@@ -244,7 +244,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 }
 
 /* ── Sequencer grid (middle) ── */
-.seq-wrap { width: 100%; max-width: 960px; margin-top: 0; margin-bottom: 0; display: flex; flex-direction: column; gap: clamp(4px, 2vw, 10px); }
+.seq-wrap { width: 100%; max-width: 960px; margin-top: 0; margin-bottom: 4px; display: flex; flex-direction: column; gap: clamp(4px, 2vw, 10px); }
 .track-wrap { display: flex; flex-direction: column; gap: 4px; }
 .track-row {
   display: flex; align-items: stretch;
@@ -387,7 +387,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">30Jun26 21:35</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">30Jun26 21:43</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -408,8 +408,39 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
   <button class="btn" id="scratchBtn">RECALL</button>
 </div>
 
-<div style="width:100%;max-width:960px;display:flex;justify-content:space-between;align-items:center;padding:6px 8px;min-height:48px;margin-bottom:5px;font-family:'DM Sans',sans-serif;font-size:1.0rem;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:#111;background:#aa64a6;"><span id="nameDisplay" style="flex:1;text-align:left;"></span><span id="keyDisplay" style="flex:1;text-align:center;cursor:pointer;user-select:none;-webkit-user-select:none;" title="tap to change key"></span><span id="bpmVal" style="flex:1;text-align:right;cursor:pointer;user-select:none;-webkit-user-select:none;">110 BPM</span></div>
+<div id="nameBar" style="width:100%;max-width:960px;display:flex;justify-content:center;align-items:center;padding:6px 8px;min-height:48px;margin-bottom:5px;font-family:'DM Sans',sans-serif;font-size:1.0rem;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:#111;background:#aa64a6;cursor:pointer;user-select:none;-webkit-user-select:none;"><span id="nameDisplay" style="text-align:center;"></span></div>
 
+
+
+<!-- Settings window — appears on reel hold -->
+<div id="settingsOverlay" style="display:none;position:fixed;inset:0;z-index:250;background:rgba(0,0,0,0.5);" id="settingsBg">
+  <div id="settingsPanel" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg);padding:28px 24px;min-width:min(340px,90vw);display:flex;flex-direction:column;gap:18px;font-family:'DM Sans',sans-serif;">
+    <div style="font-size:0.65rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:4px;">SETTINGS</div>
+
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <div style="font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);">MAIN VOL</div>
+      <input type="range" id="masterVolBar" min="0" max="100" value="80" class="master-vol-slider" style="width:100%;">
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;">
+        <div style="font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);">SWING</div>
+        <div id="swingReadout" style="font-size:1.1rem;font-weight:700;color:#111;font-family:'DM Sans',sans-serif;line-height:1;">25ms</div>
+      </div>
+      <input type="range" id="swingBar" min="0" max="100" value="62" class="master-vol-slider" style="width:100%;">
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #ddd;padding-top:14px;">
+      <div style="font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);">KEY</div>
+      <div id="keyDisplay" style="font-size:1.1rem;font-weight:700;color:#111;cursor:pointer;user-select:none;-webkit-user-select:none;letter-spacing:1px;" title="tap to change key"></div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div style="font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);">TEMPO</div>
+      <div id="bpmVal" style="font-size:1.1rem;font-weight:700;color:#111;cursor:pointer;user-select:none;-webkit-user-select:none;" onclick="openBpmOverlay()">110 BPM</div>
+    </div>
+  </div>
+</div>
 
 <!-- Save overlay -->
 <div id="saveOverlay" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(245,240,232,0.95);align-items:center;justify-content:center;touch-action:none;">
@@ -454,20 +485,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
   <span class="status" id="status"></span>
   <button class="ghost-btn" onclick="fullClear()">&#10005;</button>
 </div>
-<div class="vol-section">
-  <div style="flex:1;display:flex;align-items:center;gap:6px;">
-    <div class="vol-title">MAIN VOL</div>
-    <input type="range" id="masterVolBar" min="0" max="100" value="80" class="master-vol-slider">
-  </div>
-  <div style="flex:1;display:flex;align-items:center;gap:6px;">
-    <div style="display:flex;flex-direction:column;flex-shrink:0;">
-      <div class="vol-title">SWING</div>
-      <div id="swingReadout" style="font-size:1.1rem;font-weight:700;color:#111;font-family:'DM Sans',sans-serif;line-height:1.1;">25ms</div>
-    </div>
-    <input type="range" id="swingBar" min="0" max="100" value="62" class="master-vol-slider">
-  </div>
-</div>
-<div class="vol-title" style="margin-top:10px;margin-bottom:2px;width:100%;max-width:960px;text-align:left;">SAVED PATTERNS</div>
+<div class="vol-title" style="margin-top:4px;margin-bottom:2px;width:100%;max-width:960px;text-align:left;">SAVED PATTERNS</div>
 <div class="slot-bar" id="slotBar"></div>
 
 <script>
@@ -960,11 +978,9 @@ function updatePlayhead(step) {
       const rb = document.getElementById('saveBtn');
       if (rb) { rb.classList.remove('rec-beat-pulse'); void rb.offsetWidth; rb.classList.add('rec-beat-pulse'); }
     }
-    if (_compressOn) {
-      document.querySelectorAll('.reel-wrap').forEach(r => {
-        r.classList.remove('reel-beat-pulse'); void r.offsetWidth; r.classList.add('reel-beat-pulse');
-      });
-    }
+    document.querySelectorAll('.reel-wrap').forEach(r => {
+      r.classList.remove('reel-beat-pulse'); void r.offsetWidth; r.classList.add('reel-beat-pulse');
+    });
   }
 }
 
@@ -4061,16 +4077,35 @@ function wireRandomizeButton(btn, tr) {
 buildUI();
 updateMasterVolCells();
 
-// Hold song name to show celestial map, release to hide
+
+// ── Settings panel ──
+function showSettings() {
+  const el = document.getElementById('settingsOverlay');
+  if (el) { el.style.display = 'flex'; el.style.alignItems = 'center'; el.style.justifyContent = 'center'; }
+}
+function hideSettings() {
+  const el = document.getElementById('settingsOverlay');
+  if (el) el.style.display = 'none';
+}
+// Close on backdrop tap
 (function() {
-  const nd = document.getElementById('nameDisplay');
-  if (!nd) return;
-  nd.addEventListener('touchstart', e => { e.preventDefault(); showCelestialMap(); }, { passive: false });
-  nd.addEventListener('touchend', e => { e.preventDefault(); hideCelestialMap(); }, { passive: false });
-  nd.addEventListener('mousedown', () => showCelestialMap());
-  nd.addEventListener('mouseup', () => hideCelestialMap());
-  nd.addEventListener('mouseleave', () => hideCelestialMap());
+  const overlay = document.getElementById('settingsOverlay');
+  if (!overlay) return;
+  overlay.addEventListener('mousedown', e => { if (e.target === overlay) hideSettings(); });
+  overlay.addEventListener('touchend', e => { if (e.target === overlay) hideSettings(); }, { passive: false });
 })();
+
+// ── Name bar → star map hold ──
+(function() {
+  const nb = document.getElementById('nameBar');
+  if (!nb) return;
+  nb.addEventListener('touchstart', e => { e.preventDefault(); showCelestialMap(); }, { passive: false });
+  nb.addEventListener('touchend', e => { e.preventDefault(); hideCelestialMap(); }, { passive: false });
+  nb.addEventListener('mousedown', () => showCelestialMap());
+  nb.addEventListener('mouseup', () => hideCelestialMap());
+  nb.addEventListener('mouseleave', () => hideCelestialMap());
+})();
+
 
 // Double-click PLAY resets everything to initialized state
 (function() {
@@ -4486,58 +4521,15 @@ function startHiss() {
   _hissNode._extras = { crackNode, crackGain, rumble, rumbleLFO, rumbleGain };
 }
 
-let _compressOn = false;
-function toggleHiss() {
-  if (!ctx) { ctx && ctx.resume(); return; }
-  ctx.resume();
-  // Toggle hard compression on reels click
-  _compressOn = !_compressOn;
-  if (window.masterLimiter) {
-    if (_compressOn) {
-      window.masterLimiter.threshold.value = -20;
-      window.masterLimiter.ratio.value = 20;
-      window.masterLimiter.knee.value = 0;
-      window.masterLimiter.attack.value = 0.001;
-      window.masterLimiter.release.value = 0.05;
-    } else {
-      window.masterLimiter.threshold.value = -1;
-      window.masterLimiter.ratio.value = 20;
-      window.masterLimiter.knee.value = 0;
-      window.masterLimiter.attack.value = 0.0003;
-      window.masterLimiter.release.value = 0.1;
-    }
-  }
-  document.querySelectorAll('.reel-wrap').forEach(r => r.classList.toggle('compress-on', _compressOn));
+// turbo compression removed — reel tap now opens settings panel
 
-  // Also toggle hiss
-  if (!_hissOn) {
-    startHiss();
-    _hissOn = true;
-    document.querySelectorAll('.reel-wrap').forEach(r => r.classList.add('hiss-on'));
-  } else {
-    if (_hissGain && _hissNode) {
-      _hissGain.gain.setTargetAtTime(0, ctx.currentTime, 0.1);
-      const extras = _hissNode._extras || {};
-      setTimeout(() => {
-        try { _hissNode.stop(); } catch(e){}
-        try { extras.crackNode && extras.crackNode.stop(); } catch(e){}
-        try { extras.rumble && extras.rumble.stop(); } catch(e){}
-        try { extras.rumbleLFO && extras.rumbleLFO.stop(); } catch(e){}
-        if (extras._hissInterval) clearInterval(extras._hissInterval);
-        if (extras.crackGain) { extras.crackGain.gain.value = 0; }
-        if (extras.rumbleGain) { extras.rumbleGain.gain.value = 0; }
-        _hissNode = null; _hissGain = null;
-      }, 500);
-    }
-    _hissOn = false;
-    document.querySelectorAll('.reel-wrap').forEach(r => r.classList.remove('hiss-on'));
-  }
-}
-
-// Wire reel taps
+// Wire reel hold — opens settings panel
+let _reelHoldTimer = null;
 document.querySelectorAll('.reel-wrap').forEach(r => {
-  r.addEventListener('click', toggleHiss);
-  r.addEventListener('touchend', e => { e.preventDefault(); toggleHiss(); }, { passive: false });
+  const open = e => { e.preventDefault(); showSettings(); };
+  r.addEventListener('touchstart', e => { e.preventDefault(); showSettings(); }, { passive: false });
+  r.addEventListener('touchend', e => { e.preventDefault(); }, { passive: false });
+  r.addEventListener('mousedown', showSettings);
 });
 
 </script>
