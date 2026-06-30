@@ -346,7 +346,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 </head>
 <body>
 
-<button id="loadingOverlay" onclick="this.style.pointerEvents='none'; document.getElementById('loadingMsg').textContent='LOADING...'; initAudio()">
+<button id="loadingOverlay" onclick="this.style.pointerEvents='none'; document.getElementById('loadingMsg').textContent='LOADING...'; if ('speechSynthesis' in window) { const u = new SpeechSynthesisUtterance(' '); u.volume=0; speechSynthesis.speak(u); } initAudio()">
   <h2>BBOX</h2>
   <p id="loadingMsg">Tap to load</p>
 </button>
@@ -368,9 +368,11 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
   </div>
 </div>
 
+<div style="width:100%;max-width:960px;display:flex;justify-content:space-between;align-items:center;padding:6px 8px;min-height:48px;margin-bottom:5px;font-family:'DM Sans',sans-serif;font-size:1.0rem;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:#111;background:#aa64a6;"><span id="nameDisplay" style="flex:1;text-align:left;"></span><span id="keyDisplay" style="flex:1;text-align:center;cursor:pointer;user-select:none;-webkit-user-select:none;" title="tap to change key"></span><span id="bpmVal" style="flex:1;text-align:right;cursor:pointer;user-select:none;-webkit-user-select:none;">110 BPM</span></div>
+
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">30Jun26 06:08</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">30Jun26 07:44</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -390,8 +392,6 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
   <button class="btn" id="beatBtn">BEAT</button>
   <button class="btn" id="scratchBtn">RECALL</button>
 </div>
-<div style="width:100%;max-width:960px;display:flex;justify-content:space-between;align-items:center;padding:6px 8px;min-height:48px;margin-bottom:5px;font-family:'DM Sans',sans-serif;font-size:1.0rem;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:#111;background:#aa64a6;"><span id="nameDisplay" style="flex:1;text-align:left;"></span><span id="keyDisplay" style="flex:1;text-align:center;cursor:pointer;user-select:none;-webkit-user-select:none;" title="tap to change key"></span><span id="bpmVal" style="flex:1;text-align:right;cursor:pointer;user-select:none;-webkit-user-select:none;">110 BPM</span></div>
-
 
 
 <!-- Save overlay -->
@@ -434,12 +434,15 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
   <span class="status" id="status"></span>
   <button class="ghost-btn" onclick="fullClear()">&#10005;</button>
 </div>
+<div class="vol-section">
+  <div style="display:flex;flex-direction:column;flex-shrink:0;">
+    <div class="vol-title">SWING</div>
+    <div id="swingReadout" style="font-size:1.1rem;font-weight:700;color:#111;font-family:'DM Sans',sans-serif;line-height:1.1;">0ms</div>
+  </div>
+  <input type="range" id="masterVolBar" min="0" max="100" value="0" class="master-vol-slider">
+</div>
 <div class="vol-title" style="margin-top:10px;margin-bottom:2px;width:100%;max-width:960px;text-align:left;">SAVED PATTERNS</div>
 <div class="slot-bar" id="slotBar"></div>
-<div class="vol-section">
-  <div class="vol-title">MAIN VOL</div>
-  <input type="range" id="masterVolBar" min="0" max="100" value="80" class="master-vol-slider">
-</div>
 
 <script>
 const INSTRUMENTS = {
@@ -461,30 +464,44 @@ const INSTRUMENTS = {
   sbass3: { name: 'JAMES BASS',  soft: null, accent: null, group: 'tonal' },
   sbass4: { name: 'PUNK BASS',   soft: null, accent: null, group: 'tonal' },
   stab:   { name: 'STAB',        soft: null, accent: null, group: 'tonal' },
-  sstring:{ name: 'CHOIR',       soft: null, accent: null, group: 'tonal' },
+  sstring:{ name: 'CYBER PAD',   soft: null, accent: null, group: 'tonal' },
   sleg:   { name: 'STRINGS+',    soft: null, accent: null, group: 'tonal' },
   sparkle:{ name: 'MUTED STR',   soft: null, accent: null, group: 'tonal' },
   rhodes: { name: 'THMB PIANO',       soft: null, accent: null, group: 'tonal' },
   rhodes2:{ name: 'RHODES',      soft: null, accent: null, group: 'tonal' },
   sflute: { name: 'SYN FLUTE',   soft: null, accent: null, group: 'tonal' },
-  satk:   { name: 'SYN ATTACK',  soft: null, accent: null, group: 'tonal' },
+  satk:   { name: 'TALK BOX',    soft: null, accent: null, group: 'tonal' },
   boog:   { name: 'BOOG',        soft: null, accent: null, group: 'tonal' },
-  fflute: { name: 'VOX', soft: null, accent: null, group: 'tonal' },
+  fflute: { name: 'GLASS BELL', soft: null, accent: null, group: 'tonal' },
   blunt:  { name: 'BLUNT',        soft: null, accent: null, group: 'tonal' },
 };
 const INSTRUMENT_KEYS = Object.keys(INSTRUMENTS);
 let ctx = null, masterGain = null;
-let masterVol = 0.8;
+let masterVol = 0.0; // now repurposed: 0-1 controls swing amount, 0-60ms on offbeat steps
+const FIXED_MASTER_GAIN = 0.8; // actual output level, no longer user-controlled by this slider
 
 function setMasterVol(v) {
   masterVol = Math.max(0, Math.min(1, v));
-  if (masterGain && ctx) masterGain.gain.setTargetAtTime(masterVol, ctx.currentTime, 0.01);
   const slider = document.getElementById('masterVolBar');
   if (slider) slider.value = Math.round(masterVol * 100);
+  updateSwingReadout();
+}
+function updateSwingReadout() {
+  const readout = document.getElementById('swingReadout');
+  if (!readout) return;
+  const liveMs = Math.round(masterVol * 40);
+  const committedMs = Math.round(_committedSwing * 40);
+  readout.textContent = liveMs + 'ms';
+  readout.style.opacity = (liveMs !== committedMs && playing) ? '0.45' : '1';
+}
+let _committedSwing = 0; // only updates at bar start to avoid mid-bar timing artifacts
+function getSwingOffsetMs() {
+  return _committedSwing * 40; // 0 at min, 40ms at max
 }
 function updateMasterVolCells() {
   const slider = document.getElementById('masterVolBar');
   if (slider) slider.value = Math.round(masterVol * 100);
+  updateSwingReadout();
 }
 
 // setupMasterVolBar called after buildUI at bottom of script
@@ -659,9 +676,13 @@ function stepDuration() { return 60 / bpm / 4; }
 function scheduler() {
   while (nextStepTime < ctx.currentTime + LOOKAHEAD) {
     const step = (currentStep + 1) % NUM_STEPS; currentStep = step;
-    const t = nextStepTime;
+    // Swing: offbeat (odd) steps get delayed by up to 60ms based on master slider
+    const swingMs = (step % 2 === 1) ? getSwingOffsetMs() : 0;
+    const t = nextStepTime + (swingMs / 1000);
     // Fire pending auto-rand on downbeat
     if (step === 0) {
+      _committedSwing = masterVol; // commit swing amount only at bar start
+      requestAnimationFrame(updateSwingReadout);
       // Flip reels forward when recalled pattern starts playing
       if (window._reelReversePending) {
         window._reelReversePending = false;
@@ -702,7 +723,8 @@ function scheduler() {
         if (snap.trackRLevel) trackRLevel[tr] = snap.trackRLevel[tr] ?? 0;
       }
       if (snap.bpm) bpm = snap.bpm;
-      if (snap.masterVol !== undefined) setMasterVol(snap.masterVol);
+      // masterVol is now swing — don't restore it from old slot saves to avoid surprise changes
+      // if (snap.masterVol !== undefined) setMasterVol(snap.masterVol);
       if (snap.beatPlaying !== undefined) {
         beatPlaying = snap.beatPlaying;
         _beatPending = false;
@@ -790,7 +812,7 @@ function scheduler() {
           if (key === 'sflute')  playSynthFlute(freq, dur, val === 2, t, tr);
           if (key === 'satk')    playSynthAttack(freq, dur, val === 2, t, tr);
           if (key === 'boog')    playBoog(freq, dur, val === 2, t, tr);
-          if (key === 'fflute')  playVox(val === 2, t, tr);
+          if (key === 'fflute')  playGlassBell(freq, dur, val === 2, t, tr);
           if (key === 'blunt')   playBlunt(freq, dur, val === 2, t, tr);
           // E: filter envelope — bright open, sweep closed over note duration
           if (trackChop[tr] && trackEnvFilters[tr]) {
@@ -1104,7 +1126,7 @@ function transposeRootToRange(root, roots) {
 }
 function getRangeRoots(key) {
   if (key === 'sparkle') return SPARKLE_ROOTS;
-  if (key === 'sflute' || key === 'boog') return HIGH_ROOTS;
+  if (key === 'sflute' || key === 'boog' || key === 'fflute') return HIGH_ROOTS;
   if (key === 'blunt') return MID_ROOTS;
   if (key === 'stab') return MID_ROOTS;
   if (key === 'sstring' || key === 'sleg' || key === 'rhodes' || key === 'rhodes2') return MELODY_ROOTS;
@@ -1167,59 +1189,70 @@ function randomizeBassTrack(tr, level) {
   redrawTrackCells(tr); markModified();
 }
 
+// ── CYBER PAD: granular-feeling atmospheric texture, rainy cyberpunk, sparse strings-like ──
 function playStringSynth(freq, durSec, isAccent, time, tr) {
   if (!ctx || !freq) return;
   const dest = getSynthConnectNode(tr);
-  const vol = isAccent ? 1.960 : 1.340;
+  const vol = isAccent ? 0.045 : 0.030;
+  const tail = 2.4; // long evolving tail
 
-  // Choir: formant-filtered sawtooth voices simulating vowel "aah"
-  // Formants: F1~800Hz, F2~1200Hz, F3~2600Hz (open "ah" vowel)
-  const formants = [
-    { freq: 800,  Q: 8,  gain: 1.0 },
-    { freq: 1200, Q: 10, gain: 0.6 },
-    { freq: 2600, Q: 12, gain: 0.3 },
-  ];
+  // Cloud of slightly detuned sines — granular shimmer via fast random gain flicker
+  const grainCount = 7;
+  const detunes = [-22, -14, -7, 0, 7, 14, 22];
 
-  const voiceDetunes = [-8, -3, 0, 3, 8, 12];
-  // Reverb for space
-  const irLen = Math.floor(ctx.sampleRate * 0.6);
+  const masterEnv = ctx.createGain();
+  masterEnv.gain.setValueAtTime(0, time);
+  masterEnv.gain.linearRampToValueAtTime(vol, time + 0.6); // slow attack — pad swells in
+  masterEnv.gain.setValueAtTime(vol, time + Math.max(durSec, 0.3));
+  masterEnv.gain.exponentialRampToValueAtTime(0.0008, time + durSec + tail);
+
+  // Dark, slowly shifting LP filter — cyberpunk haze
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 0.7;
+  lp.frequency.setValueAtTime(freq * 1.4, time); // darker start
+  lp.frequency.linearRampToValueAtTime(freq * 2.8, time + durSec * 0.5); // darker peak
+  lp.frequency.linearRampToValueAtTime(freq * 1.0, time + durSec + tail); // darker tail
+
+  // Sparse reverb-like diffusion via short noise IR for rainy ambience
+  const irLen = Math.floor(ctx.sampleRate * 1.2);
   const irBuf = ctx.createBuffer(2, irLen, ctx.sampleRate);
   for (let ch = 0; ch < 2; ch++) {
     const d = irBuf.getChannelData(ch);
-    for (let i = 0; i < irLen; i++) d[i] = (Math.random()*2-1)*Math.pow(1-i/irLen,1.0);
+    for (let i = 0; i < irLen; i++) d[i] = (Math.random()*2-1) * Math.pow(1-i/irLen, 1.8);
   }
   const rev = ctx.createConvolver(); rev.buffer = irBuf;
+  const revG = ctx.createGain(); revG.gain.value = 0.5;
+  const dryG = ctx.createGain(); dryG.gain.value = 0.55;
 
-  const env = ctx.createGain();
-  env.gain.setValueAtTime(0, time);
-  env.gain.linearRampToValueAtTime(vol, time + 0.18);
-  env.gain.setValueAtTime(vol, time + durSec - 0.05);
-  env.gain.exponentialRampToValueAtTime(0.001, time + durSec + 0.8);
+  masterEnv.connect(lp);
+  lp.connect(dryG); dryG.connect(dest);
+  lp.connect(rev); rev.connect(revG); revG.connect(dest);
 
-  const dryG = ctx.createGain(); dryG.gain.value = 0.55; dryG.connect(dest);
-  const revG2 = ctx.createGain(); revG2.gain.value = 0.45;
-  rev.connect(revG2); revG2.connect(dest);
-
-  voiceDetunes.forEach((det, i) => {
-    const osc = ctx.createOscillator(); osc.type = 'sawtooth';
+  detunes.forEach((det, i) => {
+    const osc = ctx.createOscillator(); osc.type = 'sine';
     osc.frequency.value = freq; osc.detune.value = det;
-    const lfo = ctx.createOscillator(); lfo.type = 'sine';
-    lfo.frequency.value = 4.5 + i * 0.25;
-    const lfoG = ctx.createGain(); lfoG.gain.value = 3 + i;
-    lfo.connect(lfoG); lfoG.connect(osc.detune);
-    const vg = ctx.createGain(); vg.gain.value = 1 / voiceDetunes.length;
-    osc.connect(vg);
-    formants.forEach(({ freq: fFreq, Q, gain }) => {
-      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass';
-      bp.frequency.value = fFreq; bp.Q.value = Q;
-      const fg = ctx.createGain(); fg.gain.value = gain * 0.5;
-      vg.connect(bp); bp.connect(fg); fg.connect(env);
-    });
-    lfo.start(time); lfo.stop(time + durSec + 0.6);
-    osc.start(time); osc.stop(time + durSec + 0.6);
+
+    // Granular flicker — fast random-ish gain modulation per grain voice
+    const grainLfo = ctx.createOscillator(); grainLfo.type = 'sine';
+    grainLfo.frequency.value = 3 + Math.random() * 9; // 3-12Hz per-grain flutter
+    const grainLfoGain = ctx.createGain(); grainLfoGain.gain.value = 0.4;
+    const grainGain = ctx.createGain(); grainGain.gain.value = (1 / grainCount) * (0.6 + Math.random() * 0.4);
+
+    grainLfo.connect(grainLfoGain); grainLfoGain.connect(grainGain.gain);
+    osc.connect(grainGain); grainGain.connect(masterEnv);
+
+    grainLfo.start(time); grainLfo.stop(time + durSec + tail);
+    osc.start(time); osc.stop(time + durSec + tail);
   });
 
-  env.connect(dryG); env.connect(rev);
+  // High shimmer partial — distant, glassy, slightly delayed entry
+  const shimmer = ctx.createOscillator(); shimmer.type = 'sine';
+  shimmer.frequency.value = freq * 4.02;
+  const shimEnv = ctx.createGain();
+  shimEnv.gain.setValueAtTime(0, time);
+  shimEnv.gain.linearRampToValueAtTime(vol * 0.18, time + 1.0);
+  shimEnv.gain.exponentialRampToValueAtTime(0.0005, time + durSec + tail);
+  shimmer.connect(shimEnv); shimEnv.connect(dest);
+  shimmer.start(time); shimmer.stop(time + durSec + tail);
 }
 
 // ── Strings: natural bowed string feel with strong attack and warm body ──
@@ -1856,62 +1889,101 @@ function playSynthFlute(freq, durSec, isAccent, time, tr) {
 }
 
 // ── Synth Attack: sharp attack with long shimmer tail ──
+// ── TALK BOX: sawtooth through sweeping vowel formants — "ooh-wah" without speech ──
 function playSynthAttack(freq, durSec, isAccent, time, tr) {
   if (!ctx || !freq) return;
   const dest = getSynthConnectNode(tr);
-  const vel = isAccent ? 0.226 : 0.156;
-  const tail = 1.25; // tail halved
+  const vel = isAccent ? 0.27 : 0.18;
+  const tail = Math.max(durSec * 0.5, 0.25);
 
-  // Sharp metallic attack: two slightly detuned saws
-  [-4, 4].forEach(det => {
-    const osc = ctx.createOscillator(); osc.type = 'sawtooth';
-    osc.frequency.value = freq; osc.detune.value = det;
+  // Bright sawtooth core — raw buzzy source, like the talkbox driver tone
+  const osc = ctx.createOscillator(); osc.type = 'sawtooth';
+  osc.frequency.value = freq;
+  const osc2 = ctx.createOscillator(); osc2.type = 'sawtooth';
+  osc2.frequency.value = freq; osc2.detune.value = 7; // slight thickening
+
+  // Two vowel formants sweeping from "OO" to "AH" — the talkbox vowel sweep
+  // OO: F1~300, F2~870 | AH: F1~700, F2~1100
+  const f1 = ctx.createBiquadFilter(); f1.type = 'bandpass'; f1.Q.value = 12;
+  f1.frequency.setValueAtTime(300, time);
+  f1.frequency.linearRampToValueAtTime(700, time + durSec * 0.6);
+
+  const f2 = ctx.createBiquadFilter(); f2.type = 'bandpass'; f2.Q.value = 14;
+  f2.frequency.setValueAtTime(870, time);
+  f2.frequency.linearRampToValueAtTime(1100, time + durSec * 0.6);
+
+  const f1Gain = ctx.createGain(); f1Gain.gain.value = 1.0;
+  const f2Gain = ctx.createGain(); f2Gain.gain.value = 0.6;
+
+  const env = ctx.createGain();
+  env.gain.setValueAtTime(0, time);
+  env.gain.linearRampToValueAtTime(vel, time + 0.012); // punchy attack
+  env.gain.setValueAtTime(vel * 0.85, time + durSec * 0.7);
+  env.gain.exponentialRampToValueAtTime(0.001, time + durSec + tail);
+
+  const mix = ctx.createGain(); mix.gain.value = 1;
+  osc.connect(mix); osc2.connect(mix);
+  mix.connect(f1); f1.connect(f1Gain); f1Gain.connect(env);
+  mix.connect(f2); f2.connect(f2Gain); f2Gain.connect(env);
+  env.connect(dest);
+
+  osc.start(time); osc.stop(time + durSec + tail + 0.1);
+  osc2.start(time); osc2.stop(time + durSec + tail + 0.1);
+}
+
+
+// ── GLASS BELL: inharmonic FM bell/bowl tone — metallic, glassy, struck ──
+function playGlassBell(freq, durSec, isAccent, time, tr) {
+  if (!ctx || !freq) return;
+  const dest = getSynthConnectNode(tr);
+  const vel = isAccent ? 0.113 : 0.071;
+  const tail = isAccent ? 2.6 : 1.8;
+
+  // Inharmonic partials — classic bell ratios, not integer multiples
+  const partials = [
+    { ratio: 1.00, amp: 1.00, dec: 1.00 },
+    { ratio: 2.76, amp: 0.55, dec: 0.55 },
+    { ratio: 5.40, amp: 0.32, dec: 0.32 },
+    { ratio: 8.93, amp: 0.18, dec: 0.20 },
+    { ratio: 3.51, amp: 0.22, dec: 0.40 }, // slightly detuned partial for shimmer beating
+  ];
+
+  partials.forEach(p => {
+    const carrier = ctx.createOscillator(); carrier.type = 'sine';
+    carrier.frequency.value = freq * p.ratio;
+
+    // FM modulator for metallic edge on the fundamental partial only
+    let modGain = null, mod = null;
+    if (p.ratio === 1.00) {
+      mod = ctx.createOscillator(); mod.type = 'sine';
+      mod.frequency.value = freq * 1.41; // inharmonic mod ratio for clangorous attack
+      modGain = ctx.createGain();
+      modGain.gain.setValueAtTime(freq * 1.2, time);
+      modGain.gain.exponentialRampToValueAtTime(0.01, time + 0.15); // FM decays fast — metallic strike only
+      mod.connect(modGain); modGain.connect(carrier.frequency);
+      mod.start(time); mod.stop(time + 0.2);
+    }
+
     const env = ctx.createGain();
-    env.gain.setValueAtTime(vel, time);
-    env.gain.exponentialRampToValueAtTime(vel * 0.4, time + 0.015); // sharp initial drop
-    env.gain.exponentialRampToValueAtTime(0.001, time + tail);
-    osc.connect(env); env.connect(dest);
-    osc.start(time); osc.stop(time + tail + 0.1);
+    const partialDec = tail * p.dec;
+    env.gain.setValueAtTime(0, time);
+    env.gain.linearRampToValueAtTime(vel * p.amp, time + 0.004); // near-instant strike
+    env.gain.exponentialRampToValueAtTime(0.0001, time + partialDec);
+
+    carrier.connect(env); env.connect(dest);
+    carrier.start(time); carrier.stop(time + partialDec + 0.05);
   });
 
-  // High shimmer layer: high octave sine
-  const shimmer = ctx.createOscillator(); shimmer.type = 'sine';
-  shimmer.frequency.value = freq * 4;
-  const shimEnv = ctx.createGain();
-  shimEnv.gain.setValueAtTime(vel * 0.3, time);
-  shimEnv.gain.exponentialRampToValueAtTime(0.001, time + tail * 0.7);
-  shimmer.connect(shimEnv); shimEnv.connect(dest);
-  shimmer.start(time); shimmer.stop(time + tail);
-
-  // LP filter sweep: bright to warm
-  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 2;
-  lp.frequency.setValueAtTime(freq * 12, time);
-  lp.frequency.exponentialRampToValueAtTime(freq * 2, time + 0.3);
-}
-
-
-// ── VOX: speaks the song name, one word per trigger, browser-native TTS only ──
-let _voxWords = [];
-let _voxWordIdx = 0;
-function _voxRefreshWords() {
-  const name = (typeof _currentSpecies === 'string' && _currentSpecies) ? _currentSpecies : 'BBOX';
-  _voxWords = name.split(/\s+/).filter(Boolean);
-  if (_voxWords.length === 0) _voxWords = ['BBOX'];
-}
-function playVox(isAccent, time, tr) {
-  if (!('speechSynthesis' in window)) return;
-  _voxRefreshWords();
-  const word = _voxWords[_voxWordIdx % _voxWords.length];
-  _voxWordIdx++;
-  try {
-    const utter = new SpeechSynthesisUtterance(word);
-    utter.rate = isAccent ? 1.1 : 0.95;
-    utter.pitch = isAccent ? 1.15 : 1.0;
-    utter.volume = isAccent ? 1.0 : 0.7;
-    // Fire as close to 'now' as possible — speechSynthesis has no sample-accurate scheduling
-    const delayMs = Math.max(0, (time - ctx.currentTime) * 1000);
-    setTimeout(() => { try { speechSynthesis.speak(utter); } catch(e) {} }, delayMs);
-  } catch(e) { /* speechSynthesis unsupported or blocked */ }
+  // Soft noise click for the strike transient
+  const clickLen = 0.006;
+  const clickBuf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * clickLen), ctx.sampleRate);
+  const cd = clickBuf.getChannelData(0);
+  for (let i = 0; i < cd.length; i++) cd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / cd.length, 2);
+  const click = ctx.createBufferSource(); click.buffer = clickBuf;
+  const clickHP = ctx.createBiquadFilter(); clickHP.type = 'highpass'; clickHP.frequency.value = freq * 3;
+  const clickEnv = ctx.createGain(); clickEnv.gain.value = vel * 0.5;
+  click.connect(clickHP); clickHP.connect(clickEnv); clickEnv.connect(dest);
+  click.start(time);
 }
 
 function playKick(t) {
@@ -1957,26 +2029,12 @@ function setBeatVol(v) {
   if (window._beatGain && ctx) window._beatGain.gain.setTargetAtTime(v, ctx.currentTime, 0.01);
 }
 
-// BEAT button: tap=toggle, hold=volume overlay
+// BEAT button: instant toggle, same responsiveness as save slots
 (function() {
   const btn = document.getElementById('beatBtn');
   if (!btn) return;
   btn.removeAttribute('onclick');
-  let pressStart = 0;
-  btn.addEventListener('touchstart', e => { e.preventDefault(); pressStart = Date.now(); }, { passive: false });
-  btn.addEventListener('touchend', e => {
-    e.preventDefault();
-    const held = Date.now() - pressStart;
-    if (held >= 600) {
-      // Long press — open overlay
-      const ov = document.getElementById('beatVolOverlay');
-      ov.style.display = 'flex';
-      setTimeout(() => { ov.addEventListener('click', () => { ov.style.display = 'none'; }, { once: true }); }, 300);
-    } else {
-      // Short tap — toggle
-      toggleBeat();
-    }
-  }, { passive: false });
+  btn.addEventListener('touchstart', e => { e.preventDefault(); toggleBeat(); }, { passive: false });
 })();
 
 function toggleBeat() {
@@ -2289,7 +2347,7 @@ function previewNote(tr, isAccent) {
     else if (key === 'sflute')  playSynthFlute(freq, dur, isAccent, t, tr);
     else if (key === 'satk')    playSynthAttack(freq, dur, isAccent, t, tr);
     else if (key === 'boog')    playBoog(freq, dur, isAccent, t, tr);
-    else if (key === 'fflute')  playVox(isAccent, t, tr);
+    else if (key === 'fflute')  playGlassBell(freq, dur, isAccent, t, tr);
     else if (key === 'blunt')   playBlunt(freq, dur, isAccent, t, tr);
   } else {
     playBuffer(key, isAccent, t, tr);
@@ -3862,7 +3920,12 @@ updateMasterVolCells();
   const slider = document.getElementById('masterVolBar');
   if (!slider) return;
   slider.value = Math.round(masterVol * 100);
-  slider.addEventListener('input', () => setMasterVol(slider.value / 100));
+  const SNAP_ZONE = 5; // within 5% of zero, magnetically snap to exactly 0
+  slider.addEventListener('input', () => {
+    let v = +slider.value;
+    if (v <= SNAP_ZONE) v = 0;
+    setMasterVol(v / 100);
+  });
 })();
 
 let _initStarted = false;
@@ -3878,8 +3941,8 @@ async function initAudio() {
     await ctx.resume();
     msg.textContent = 'RESUMED, BUILDING GRAPH...';
     attachCtxStateWatch();
-    masterGain = ctx.createGain(); masterGain.gain.value = masterVol;
-    window._beatGain = ctx.createGain(); window._beatGain.gain.value = 0.531; window._beatGain.connect(masterGain);
+    masterGain = ctx.createGain(); masterGain.gain.value = FIXED_MASTER_GAIN;
+    window._beatGain = ctx.createGain(); window._beatGain.gain.value = 0.668; window._beatGain.connect(masterGain);
     // UI Sounds
     const _uiSoundBufs = {};
     window._uiSoundBufs = _uiSoundBufs;
@@ -3946,9 +4009,22 @@ if ('serviceWorker' in navigator) {
   if (!btn) return;
   let sweepNodes = null;
 
+  // Sidechain analyser on master output — reads current mix level to duck the sweep
+  let _sweepAnalyser = null, _sweepAnalyserData = null, _sweepDuckLoop = null;
+  function ensureSweepAnalyser() {
+    if (_sweepAnalyser || !ctx || !masterGain) return;
+    _sweepAnalyser = ctx.createAnalyser();
+    _sweepAnalyser.fftSize = 256;
+    _sweepAnalyser.smoothingTimeConstant = 0.6;
+    masterGain.connect(_sweepAnalyser);
+    _sweepAnalyserData = new Uint8Array(_sweepAnalyser.frequencyBinCount);
+  }
+
   function startSweep() {
     if (!ctx || sweepNodes) return;
     ctx.resume();
+    ensureSweepAnalyser();
+    window._sweepStartMs = Date.now();
     const dur = stepDuration() * 16; // full sweep duration
     const t = ctx.currentTime;
     const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * (dur + 1)), ctx.sampleRate);
@@ -3959,19 +4035,42 @@ if ('serviceWorker' in navigator) {
     bp.frequency.setValueAtTime(200, t);
     bp.frequency.exponentialRampToValueAtTime(8000, t + dur * 0.5); // up to peak
     bp.frequency.exponentialRampToValueAtTime(200, t + dur); // back down
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0, t);
-    gain.gain.linearRampToValueAtTime(0.191, t + 0.008);
-    noise.connect(bp); bp.connect(gain); gain.connect(masterGain);
+
+    // baseGain holds the "intended" envelope level; duckGain applies sidechain ducking on top
+    const baseGain = ctx.createGain();
+    baseGain.gain.setValueAtTime(0, t);
+    baseGain.gain.linearRampToValueAtTime(0.191, t + 0.008);
+    const duckGain = ctx.createGain();
+    duckGain.gain.value = 1;
+
+    noise.connect(bp); bp.connect(baseGain); baseGain.connect(duckGain); duckGain.connect(masterGain);
     noise.start(t);
-    sweepNodes = { noise, bp, gain };
+    sweepNodes = { noise, bp, gain: baseGain, duckGain };
     btn.classList.add('active');
+
+    // Continuously sample master output level and duck the sweep inversely
+    const duckLoop = () => {
+      if (!sweepNodes || !_sweepAnalyser) return;
+      _sweepAnalyser.getByteTimeDomainData(_sweepAnalyserData);
+      let sumSq = 0;
+      for (let i = 0; i < _sweepAnalyserData.length; i++) {
+        const v = (_sweepAnalyserData[i] - 128) / 128;
+        sumSq += v * v;
+      }
+      const rms = Math.sqrt(sumSq / _sweepAnalyserData.length); // 0-1ish
+      const duckAmount = Math.min(1, rms * 6.5); // sensitivity — more reactive
+      const targetGain = 1 - duckAmount * 0.95; // duck down to 5% at loudest — near silent at peaks
+      duckGain.gain.setTargetAtTime(targetGain, ctx.currentTime, 0.02); // faster response
+      _sweepDuckLoop = requestAnimationFrame(duckLoop);
+    };
+    duckLoop();
   }
 
   function stopSweep() {
     if (!sweepNodes || !ctx) return;
-    const { bp, gain, noise } = sweepNodes;
+    const { bp, gain, noise, duckGain } = sweepNodes;
     sweepNodes = null;
+    if (_sweepDuckLoop) cancelAnimationFrame(_sweepDuckLoop);
     btn.classList.remove('active');
     const t = ctx.currentTime;
     const quarterNote = stepDuration() * 2; // half a beat fade
@@ -3986,7 +4085,7 @@ if ('serviceWorker' in navigator) {
   btn.addEventListener('touchstart', e => { e.preventDefault(); startSweep(); }, { passive: false });
   btn.addEventListener('touchend', e => {
     e.preventDefault();
-    const minMs = stepDuration() * 1000; // one 16th note
+    const minMs = 2000; // quick tap still plays a full 2-second sweep
     const elapsed = Date.now() - (window._sweepStartMs || 0);
     if (elapsed < minMs) setTimeout(stopSweep, minMs - elapsed);
     else stopSweep();
