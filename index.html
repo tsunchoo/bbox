@@ -370,7 +370,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">30Jun26 07:10</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">30Jun26 07:19</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -1193,7 +1193,7 @@ function randomizeBassTrack(tr, level) {
 function playStringSynth(freq, durSec, isAccent, time, tr) {
   if (!ctx || !freq) return;
   const dest = getSynthConnectNode(tr);
-  const vol = isAccent ? 0.034 : 0.022;
+  const vol = isAccent ? 0.045 : 0.030;
   const tail = 2.4; // long evolving tail
 
   // Cloud of slightly detuned sines — granular shimmer via fast random gain flicker
@@ -1208,9 +1208,9 @@ function playStringSynth(freq, durSec, isAccent, time, tr) {
 
   // Dark, slowly shifting LP filter — cyberpunk haze
   const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 0.7;
-  lp.frequency.setValueAtTime(freq * 2.2, time);
-  lp.frequency.linearRampToValueAtTime(freq * 4.5, time + durSec * 0.5);
-  lp.frequency.linearRampToValueAtTime(freq * 1.5, time + durSec + tail);
+  lp.frequency.setValueAtTime(freq * 1.4, time); // darker start
+  lp.frequency.linearRampToValueAtTime(freq * 2.8, time + durSec * 0.5); // darker peak
+  lp.frequency.linearRampToValueAtTime(freq * 1.0, time + durSec + tail); // darker tail
 
   // Sparse reverb-like diffusion via short noise IR for rainy ambience
   const irLen = Math.floor(ctx.sampleRate * 1.2);
@@ -1893,7 +1893,7 @@ function playSynthFlute(freq, durSec, isAccent, time, tr) {
 function playSynthAttack(freq, durSec, isAccent, time, tr) {
   if (!ctx || !freq) return;
   const dest = getSynthConnectNode(tr);
-  const vel = isAccent ? 0.20 : 0.13;
+  const vel = isAccent ? 0.27 : 0.18;
   const tail = Math.max(durSec * 0.5, 0.25);
 
   // Bright sawtooth core — raw buzzy source, like the talkbox driver tone
