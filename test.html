@@ -387,7 +387,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">30Jun26 18:18</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">30Jun26 18:49</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -1319,67 +1319,70 @@ function playStringSynth(freq, durSec, isAccent, time, tr) {
 
 // ── Strings: natural bowed string feel with strong attack and warm body ──
 const _slegGlide = {};
-// ── SOLAR PAD: natural, sparkly, evolving pad — warmer and more organic than CYBER PAD ──
+// ── SOLAR PAD: slow lush pad — thick layered sines, very gentle shimmer, evolving filter ──
 function playSynthLeg(freq, durSec, isAccent, time, tr) {
   if (!ctx || !freq) return;
   const dest = getSynthConnectNode(tr);
-  const vol = isAccent ? 0.048 : 0.032;
-  const tail = 2.2;
+  const vol = isAccent ? 0.052 : 0.034;
+  const tail = 2.4;
 
-  // Core: 5 sine voices in natural harmonic ratios with gentle detuning — organic, not buzzy
-  const ratios = [1.0, 1.501, 2.0, 2.997, 4.0]; // close to harmonics but slightly mistuned for beating
-  const dets   = [0,    7,    -5,   3,    -8];   // subtle per-voice detune for chorus shimmer
+  // 7 detuned sine voices — thick, warm, chorus-like spread
+  // Slight beating between voices creates slow natural shimmer without any LFO flutter
+  const detunes = [-18, -11, -5, 0, 5, 11, 18];
   const masterEnv = ctx.createGain();
   masterEnv.gain.setValueAtTime(0, time);
-  masterEnv.gain.linearRampToValueAtTime(vol, time + 0.35);   // slow natural swell
-  masterEnv.gain.setValueAtTime(vol, time + Math.max(durSec, 0.4));
-  masterEnv.gain.exponentialRampToValueAtTime(0.0008, time + durSec + tail);
+  masterEnv.gain.linearRampToValueAtTime(vol, time + 0.55);   // very slow pad swell
+  masterEnv.gain.setValueAtTime(vol, time + Math.max(durSec, 0.5));
+  masterEnv.gain.exponentialRampToValueAtTime(0.0006, time + durSec + tail);
 
-  ratios.forEach((ratio, i) => {
+  detunes.forEach(det => {
     const osc = ctx.createOscillator(); osc.type = 'sine';
-    osc.frequency.value = freq * ratio; osc.detune.value = dets[i];
-    // Individual amplitude LFOs at different rates for breathing/evolving texture
-    const ampLfo = ctx.createOscillator(); ampLfo.type = 'sine';
-    ampLfo.frequency.value = 0.3 + i * 0.11 + Math.random() * 0.05;
-    const ampLfoGain = ctx.createGain(); ampLfoGain.gain.value = 0.25;
-    const ampBase = ctx.createGain(); ampBase.gain.value = (1 - i * 0.15);
-    ampLfo.connect(ampLfoGain); ampLfoGain.connect(ampBase.gain);
-    osc.connect(ampBase); ampBase.connect(masterEnv);
-    ampLfo.start(time); ampLfo.stop(time + durSec + tail);
+    osc.frequency.value = freq; osc.detune.value = det;
+    const vg = ctx.createGain(); vg.gain.value = 1 / detunes.length;
+    osc.connect(vg); vg.connect(masterEnv);
     osc.start(time); osc.stop(time + durSec + tail);
   });
 
-  // Sparkle: high inharmonic sine cluster (bell-like overtones, short decay)
-  [3.72, 5.83, 7.01].forEach((ratio, i) => {
+  // Upper octave layer — adds air and space, very quiet
+  const octDets = [-8, 0, 8];
+  octDets.forEach(det => {
+    const osc = ctx.createOscillator(); osc.type = 'sine';
+    osc.frequency.value = freq * 2; osc.detune.value = det;
+    const vg = ctx.createGain(); vg.gain.value = 0.08;
+    osc.connect(vg); vg.connect(masterEnv);
+    osc.start(time); osc.stop(time + durSec + tail);
+  });
+
+  // Sparkle: three very quiet high-ratio sines with long gentle decay — not chirpy, just shimmer
+  [4.01, 6.0, 8.02].forEach((ratio, i) => {
     const sp = ctx.createOscillator(); sp.type = 'sine';
     sp.frequency.value = freq * ratio;
     const spEnv = ctx.createGain();
-    spEnv.gain.setValueAtTime(vol * 0.14, time + 0.01 + i * 0.02);
-    spEnv.gain.exponentialRampToValueAtTime(0.0001, time + 0.4 + i * 0.2);
-    sp.connect(spEnv); spEnv.connect(dest);
-    sp.start(time); sp.stop(time + 0.7);
+    spEnv.gain.setValueAtTime(0, time);
+    spEnv.gain.linearRampToValueAtTime(vol * 0.04, time + 0.3 + i * 0.1);
+    spEnv.gain.exponentialRampToValueAtTime(0.0001, time + durSec * 0.7 + i * 0.3);
+    sp.connect(spEnv); spEnv.connect(masterEnv);
+    sp.start(time); sp.stop(time + durSec + 0.5);
   });
 
-  // Evolving filter: slowly opens and breathes, giving motion to the pad
-  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 1.5;
-  lp.frequency.setValueAtTime(freq * 1.5, time);
-  lp.frequency.linearRampToValueAtTime(freq * 5.5, time + durSec * 0.4);
-  lp.frequency.linearRampToValueAtTime(freq * 2.5, time + durSec * 0.8);
-  lp.frequency.exponentialRampToValueAtTime(freq * 1.2, time + durSec + tail);
+  // Slowly evolving lowpass — opens gradually then breathes back down
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 0.8;
+  lp.frequency.setValueAtTime(freq * 2.0, time);
+  lp.frequency.linearRampToValueAtTime(freq * 6.0, time + durSec * 0.5);
+  lp.frequency.linearRampToValueAtTime(freq * 3.0, time + durSec + tail);
 
-  // Gentle highpass to keep it airy
-  const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = freq * 0.6; hp.Q.value = 0.5;
+  const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 80; hp.Q.value = 0.5;
 
-  // Natural reverb — longer IR for spaciousness
-  const irLen = Math.floor(ctx.sampleRate * 0.9);
+  // Lush reverb tail — generous wet mix for spaciousness
+  const irLen = Math.floor(ctx.sampleRate * 1.1);
   const irBuf = ctx.createBuffer(2, irLen, ctx.sampleRate);
   for (let ch = 0; ch < 2; ch++) {
     const d = irBuf.getChannelData(ch);
-    for (let i = 0; i < irLen; i++) d[i] = (Math.random()*2-1) * Math.pow(1-i/irLen, 1.4);
+    for (let i = 0; i < irLen; i++) d[i] = (Math.random()*2-1) * Math.pow(1-i/irLen, 1.2);
   }
   const rev = ctx.createConvolver(); rev.buffer = irBuf;
-  const dryG = ctx.createGain(); dryG.gain.value = 0.55; dryG.connect(dest);
-  const revG = ctx.createGain(); revG.gain.value = 0.55; revG.connect(dest);
+  const dryG = ctx.createGain(); dryG.gain.value = 0.5; dryG.connect(dest);
+  const revG = ctx.createGain(); revG.gain.value = 0.6; revG.connect(dest);
 
   masterEnv.connect(lp); lp.connect(hp);
   hp.connect(dryG); hp.connect(rev); rev.connect(revG);
@@ -2090,7 +2093,7 @@ function showCelestialMap() {
   if (!coord) return; // no target — stay zoomed out
 
   const [tx, ty] = coord;
-  const zoomW = 60, zoomH = 60;
+  const zoomW = 150, zoomH = 150;
   const endVB = {
     x: Math.max(0, Math.min(CMAP_VIEW.w - zoomW, tx - zoomW/2)),
     y: Math.max(0, Math.min(CMAP_VIEW.h - zoomH, ty - zoomH/2)),
