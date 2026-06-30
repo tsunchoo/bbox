@@ -370,7 +370,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">30Jun26 06:42</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">30Jun26 06:59</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -437,9 +437,11 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 <div class="vol-title" style="margin-top:10px;margin-bottom:2px;width:100%;max-width:960px;text-align:left;">SAVED PATTERNS</div>
 <div class="slot-bar" id="slotBar"></div>
 <div class="vol-section">
-  <div class="vol-title">SWING</div>
+  <div style="display:flex;flex-direction:column;flex-shrink:0;">
+    <div class="vol-title">SWING</div>
+    <div id="swingReadout" style="font-size:1.1rem;font-weight:700;color:#111;font-family:'DM Sans',sans-serif;line-height:1.1;">0ms</div>
+  </div>
   <input type="range" id="masterVolBar" min="0" max="100" value="0" class="master-vol-slider">
-  <div id="swingReadout" style="font-size:0.6rem;letter-spacing:1px;color:var(--dim);font-weight:700;flex-shrink:0;width:42px;text-align:right;">0ms</div>
 </div>
 
 <script>
@@ -482,8 +484,15 @@ function setMasterVol(v) {
   masterVol = Math.max(0, Math.min(1, v));
   const slider = document.getElementById('masterVolBar');
   if (slider) slider.value = Math.round(masterVol * 100);
+  updateSwingReadout();
+}
+function updateSwingReadout() {
   const readout = document.getElementById('swingReadout');
-  if (readout) readout.textContent = Math.round(getSwingOffsetMs()) + 'ms';
+  if (!readout) return;
+  const liveMs = Math.round(masterVol * 60);
+  const committedMs = Math.round(_committedSwing * 60);
+  readout.textContent = liveMs + 'ms';
+  readout.style.opacity = (liveMs !== committedMs && playing) ? '0.45' : '1';
 }
 let _committedSwing = 0; // only updates at bar start to avoid mid-bar timing artifacts
 function getSwingOffsetMs() {
@@ -492,8 +501,7 @@ function getSwingOffsetMs() {
 function updateMasterVolCells() {
   const slider = document.getElementById('masterVolBar');
   if (slider) slider.value = Math.round(masterVol * 100);
-  const readout = document.getElementById('swingReadout');
-  if (readout) readout.textContent = Math.round(getSwingOffsetMs()) + 'ms';
+  updateSwingReadout();
 }
 
 // setupMasterVolBar called after buildUI at bottom of script
@@ -674,6 +682,7 @@ function scheduler() {
     // Fire pending auto-rand on downbeat
     if (step === 0) {
       _committedSwing = masterVol; // commit swing amount only at bar start
+      requestAnimationFrame(updateSwingReadout);
       // Flip reels forward when recalled pattern starts playing
       if (window._reelReversePending) {
         window._reelReversePending = false;
