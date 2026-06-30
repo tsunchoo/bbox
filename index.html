@@ -17,12 +17,12 @@
   --vol-fill: #ffac00;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { overflow: hidden; overflow-x: hidden; height: 100svh; max-height: 100svh; }
+html, body { overflow-y: auto; overflow-x: hidden; min-height: 100svh; }
 button, .step-cell, .track-header-btn, .vol-mute-col, .fx-btn { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 body {
   background: var(--bg); color: var(--text);
   font-family: 'DM Sans', sans-serif;
-  height: 100svh; max-height: 100svh; overflow: hidden; display: flex; flex-direction: column; align-items: center;
+  min-height: 100svh; overflow-y: auto; display: flex; flex-direction: column; align-items: center;
   padding: 16px 4px 16px 4px; user-select: none; -webkit-user-select: none; box-sizing: border-box;
 }
 body::before {
@@ -370,7 +370,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">30Jun26 05:49</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">30Jun26 06:08</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -469,7 +469,7 @@ const INSTRUMENTS = {
   sflute: { name: 'SYN FLUTE',   soft: null, accent: null, group: 'tonal' },
   satk:   { name: 'SYN ATTACK',  soft: null, accent: null, group: 'tonal' },
   boog:   { name: 'BOOG',        soft: null, accent: null, group: 'tonal' },
-  fflute: { name: 'SAXY', soft: null, accent: null, group: 'tonal' },
+  fflute: { name: 'VOX', soft: null, accent: null, group: 'tonal' },
   blunt:  { name: 'BLUNT',        soft: null, accent: null, group: 'tonal' },
 };
 const INSTRUMENT_KEYS = Object.keys(INSTRUMENTS);
@@ -676,6 +676,7 @@ function scheduler() {
         _autoRandPending = false;
         _recallSnapB = snapshotState(); // save current as previous before change
         randAll(_autoRandMode); _autoRandMode = undefined;
+        clearBtnBlueHeld('randBtn');
       }
     }
     // Apply pending slot swap before audio is scheduled so step 0 plays from the new pattern
@@ -789,7 +790,7 @@ function scheduler() {
           if (key === 'sflute')  playSynthFlute(freq, dur, val === 2, t, tr);
           if (key === 'satk')    playSynthAttack(freq, dur, val === 2, t, tr);
           if (key === 'boog')    playBoog(freq, dur, val === 2, t, tr);
-          if (key === 'fflute')  playForestFlute(freq, dur, val === 2, t, tr);
+          if (key === 'fflute')  playVox(val === 2, t, tr);
           if (key === 'blunt')   playBlunt(freq, dur, val === 2, t, tr);
           // E: filter envelope — bright open, sweep closed over note duration
           if (trackChop[tr] && trackEnvFilters[tr]) {
@@ -1104,7 +1105,6 @@ function transposeRootToRange(root, roots) {
 function getRangeRoots(key) {
   if (key === 'sparkle') return SPARKLE_ROOTS;
   if (key === 'sflute' || key === 'boog') return HIGH_ROOTS;
-  if (key === 'fflute') return MELODY_ROOTS; // SAX — one octave lower
   if (key === 'blunt') return MID_ROOTS;
   if (key === 'stab') return MID_ROOTS;
   if (key === 'sstring' || key === 'sleg' || key === 'rhodes' || key === 'rhodes2') return MELODY_ROOTS;
@@ -1889,6 +1889,31 @@ function playSynthAttack(freq, durSec, isAccent, time, tr) {
   lp.frequency.exponentialRampToValueAtTime(freq * 2, time + 0.3);
 }
 
+
+// ── VOX: speaks the song name, one word per trigger, browser-native TTS only ──
+let _voxWords = [];
+let _voxWordIdx = 0;
+function _voxRefreshWords() {
+  const name = (typeof _currentSpecies === 'string' && _currentSpecies) ? _currentSpecies : 'BBOX';
+  _voxWords = name.split(/\s+/).filter(Boolean);
+  if (_voxWords.length === 0) _voxWords = ['BBOX'];
+}
+function playVox(isAccent, time, tr) {
+  if (!('speechSynthesis' in window)) return;
+  _voxRefreshWords();
+  const word = _voxWords[_voxWordIdx % _voxWords.length];
+  _voxWordIdx++;
+  try {
+    const utter = new SpeechSynthesisUtterance(word);
+    utter.rate = isAccent ? 1.1 : 0.95;
+    utter.pitch = isAccent ? 1.15 : 1.0;
+    utter.volume = isAccent ? 1.0 : 0.7;
+    // Fire as close to 'now' as possible — speechSynthesis has no sample-accurate scheduling
+    const delayMs = Math.max(0, (time - ctx.currentTime) * 1000);
+    setTimeout(() => { try { speechSynthesis.speak(utter); } catch(e) {} }, delayMs);
+  } catch(e) { /* speechSynthesis unsupported or blocked */ }
+}
+
 function playKick(t) {
   const beatDest = window._beatGain || masterGain;
   const osc = ctx.createOscillator(), g = ctx.createGain();
@@ -2264,7 +2289,7 @@ function previewNote(tr, isAccent) {
     else if (key === 'sflute')  playSynthFlute(freq, dur, isAccent, t, tr);
     else if (key === 'satk')    playSynthAttack(freq, dur, isAccent, t, tr);
     else if (key === 'boog')    playBoog(freq, dur, isAccent, t, tr);
-    else if (key === 'fflute')  playForestFlute(freq, dur, isAccent, t, tr);
+    else if (key === 'fflute')  playVox(isAccent, t, tr);
     else if (key === 'blunt')   playBlunt(freq, dur, isAccent, t, tr);
   } else {
     playBuffer(key, isAccent, t, tr);
@@ -2788,6 +2813,14 @@ function flashBtnOrange(id) {
   btn.style.background = '#ffac00'; btn.style.color = '#111';
   setTimeout(() => { btn.style.background = ''; btn.style.color = ''; }, 300);
 }
+function setBtnBlueHeld(id) {
+  const b = document.getElementById(id); if (!b) return;
+  b.classList.add('btn-flash-blue');
+}
+function clearBtnBlueHeld(id) {
+  const b = document.getElementById(id); if (!b) return;
+  b.classList.remove('btn-flash-blue');
+}
 function flashBtnBlue(id) {
   const b = document.getElementById(id);
   if (!b) return;
@@ -2891,6 +2924,7 @@ function queueRand(mode) {
     _autoRandMode = mode;
   } else {
     randAll(mode);
+    clearBtnBlueHeld('randBtn');
   }
 }
 let _autoRandMode = undefined;
@@ -3134,7 +3168,7 @@ let randAllLevel = 0;
 
 let _randHeld = false;
 function handleRandTap() {
-  if (!_randHeld) { playUiSound('click'); flashBtnBlue('randBtn'); queueRand(); }
+  if (!_randHeld) { playUiSound('click'); setBtnBlueHeld('randBtn'); queueRand(); }
   _randHeld = false;
 }
 
@@ -3394,7 +3428,7 @@ function randAll(mode) {
     } else {
       // Single tap — one rand
       if (autoRandInterval) { stopAuto(); }
-      else { const rb=document.getElementById('randBtn'); flashBtnBlue('randBtn'); queueRand(); }
+      else { setBtnBlueHeld('randBtn'); queueRand(); }
     }
     lastTap = now;
   };
@@ -3972,7 +4006,7 @@ if ('serviceWorker' in navigator) {
     if (target && !target.dataset.sweepTriggered) {
       target.dataset.sweepTriggered = '1';
       if (target.id === 'beatBtn') toggleBeat();
-      if (target.id === 'randBtn') { flashBtnBlue('randBtn'); queueRand(); }
+      if (target.id === 'randBtn') { setBtnBlueHeld('randBtn'); queueRand(); }
       if (target.id === 'scratchBtn') { if (_recallSnapB) { const _cur = snapshotState(); restoreState(_recallSnapB); flashBtnOrange('scratchBtn'); window._reelReversePending = true; _recallSnapB = _cur; playUiSound('rewind'); } }
     }
   }, { passive: false });
