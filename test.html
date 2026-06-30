@@ -387,7 +387,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">30Jun26 17:57</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">30Jun26 18:03</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -4073,6 +4073,17 @@ function wireRandomizeButton(btn, tr) {
 buildUI();
 updateMasterVolCells();
 
+// Hold song name to show celestial map, release to hide
+(function() {
+  const nd = document.getElementById('nameDisplay');
+  if (!nd) return;
+  nd.addEventListener('touchstart', e => { e.preventDefault(); showCelestialMap(); }, { passive: false });
+  nd.addEventListener('touchend', e => { e.preventDefault(); hideCelestialMap(); }, { passive: false });
+  nd.addEventListener('mousedown', () => showCelestialMap());
+  nd.addEventListener('mouseup', () => hideCelestialMap());
+  nd.addEventListener('mouseleave', () => hideCelestialMap());
+})();
+
 // Double-click PLAY resets everything to initialized state
 (function() {
   const playBtn = document.getElementById('playBtn');
@@ -4198,7 +4209,6 @@ if ('serviceWorker' in navigator) {
   }
 
   function startSweep() {
-    showCelestialMap();
     if (!ctx || sweepNodes) return;
     ctx.resume();
     ensureSweepAnalyser();
@@ -4245,7 +4255,6 @@ if ('serviceWorker' in navigator) {
   }
 
   function stopSweep() {
-    hideCelestialMap();
     if (!sweepNodes || !ctx) return;
     const { bp, gain, noise, duckGain } = sweepNodes;
     sweepNodes = null;
