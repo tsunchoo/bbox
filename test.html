@@ -387,7 +387,7 @@ input[type=range]::-moz-range-thumb { width: 32px; height: 32px; background: var
 
 <header>
   <h1>BBOX</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">30Jun26 18:03</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">30Jun26 18:14</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -2105,7 +2105,7 @@ function showCelestialMap() {
   if (!coord) return; // no target — stay zoomed out
 
   const [tx, ty] = coord;
-  const zoomW = 500, zoomH = 500;
+  const zoomW = 60, zoomH = 60;
   const endVB = {
     x: Math.max(0, Math.min(CMAP_VIEW.w - zoomW, tx - zoomW/2)),
     y: Math.max(0, Math.min(CMAP_VIEW.h - zoomH, ty - zoomH/2)),
