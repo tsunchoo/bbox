@@ -389,7 +389,7 @@ input[type=range]::-moz-range-thumb { width: 28px; height: 28px; background: #f1
 
 <header>
   <h1>SCI-FI BAR</h1>
-  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">01Jul26 02:32</div>
+  <div style="font-size:0.6rem;color:#e74c3c;letter-spacing:1px;font-family:'DM Sans',sans-serif;margin-top:2px;">01Jul26 02:38</div>
 
   <div id="tapeReels" class="tape-reels">
     <div class="reel-wrap">
@@ -4388,7 +4388,7 @@ if ('serviceWorker' in navigator) {
     if (target && !target.dataset.sweepTriggered) {
       target.dataset.sweepTriggered = '1';
       if (target.id === 'beatBtn') toggleBeat();
-      if (target.id === 'randBtn') { setBtnBlueHeld('randBtn'); queueRand(); setTimeout(() => clearBtnBlueHeld('randBtn'), 300); }
+      if (target.id === 'randBtn') { flashBtnBlue('randBtn'); queueRand(); }
       if (target.id === 'scratchBtn') { if (_recallSnapB) { const _cur = snapshotState(); restoreState(_recallSnapB); flashBtnOrange('scratchBtn'); window._reelReversePending = true; _recallSnapB = _cur; playUiSound(Math.random() < 0.5 ? 'rewind' : 'rewind2'); } }
     }
   }, { passive: false });
